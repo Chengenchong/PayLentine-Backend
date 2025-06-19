@@ -6,6 +6,7 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 PayLentine Backend Server is running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔍 Swagger: http://localhost:${PORT}/api-docs`);
 });
 
 // Graceful shutdown

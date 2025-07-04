@@ -192,6 +192,136 @@ const swaggerDefinition = {
           },
         },
       },
+      WalletBalance: {
+        type: 'object',
+        properties: {
+          balance: {
+            type: 'number',
+            description: 'Current wallet balance',
+            example: 1000.50,
+          },
+          currency: {
+            type: 'string',
+            description: 'Currency code',
+            example: 'USD',
+          },
+        },
+      },
+      CreateCurrencyWalletRequest: {
+        type: 'object',
+        required: ['currency'],
+        properties: {
+          currency: {
+            type: 'string',
+            description: 'Currency code (3 letters)',
+            example: 'EUR',
+            minLength: 3,
+            maxLength: 3,
+          },
+        },
+      },
+      AddMoneyRequest: {
+        type: 'object',
+        required: ['amount'],
+        properties: {
+          amount: {
+            type: 'number',
+            description: 'Amount to add to wallet',
+            example: 100.00,
+          },
+          currency: {
+            type: 'string',
+            description: 'Currency code',
+            example: 'USD',
+          },
+        },
+      },
+      TransferRequest: {
+        type: 'object',
+        required: ['toUserId', 'amount'],
+        properties: {
+          toUserId: {
+            type: 'integer',
+            description: 'ID of the recipient user',
+            example: 2,
+          },
+          amount: {
+            type: 'number',
+            description: 'Amount to transfer',
+            example: 50.00,
+          },
+          currency: {
+            type: 'string',
+            description: 'Currency code',
+            example: 'USD',
+          },
+          description: {
+            type: 'string',
+            description: 'Optional transfer description',
+            example: 'Payment for services',
+          },
+        },
+      },
+      TransferResponse: {
+        type: 'object',
+        properties: {
+          fromUser: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'integer',
+                description: 'Sender user ID',
+                example: 1,
+              },
+              name: {
+                type: 'string',
+                description: 'Sender full name',
+                example: 'John Doe',
+              },
+              newBalance: {
+                type: 'number',
+                description: 'Sender new balance',
+                example: 950.00,
+              },
+            },
+          },
+          toUser: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'integer',
+                description: 'Recipient user ID',
+                example: 2,
+              },
+              name: {
+                type: 'string',
+                description: 'Recipient full name',
+                example: 'Jane Smith',
+              },
+              newBalance: {
+                type: 'number',
+                description: 'Recipient new balance',
+                example: 1050.00,
+              },
+            },
+          },
+          amount: {
+            type: 'number',
+            description: 'Transfer amount',
+            example: 50.00,
+          },
+          currency: {
+            type: 'string',
+            description: 'Currency code',
+            example: 'USD',
+          },
+          description: {
+            type: 'string',
+            description: 'Transfer description',
+            example: 'Payment for services',
+          },
+        },
+      },
     },
   },
   security: [

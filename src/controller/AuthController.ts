@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/AuthService';
 import { HTTP_STATUS } from '../constants';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export class AuthController {
   /**
@@ -273,6 +277,80 @@ export class AuthController {
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: 'Internal server error',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/auth/setup-database:
+   *   post:
+   *     summary: Initialize database tables and seed data (Admin only)
+   *     tags: [Authentication]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Database setup completed successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponse'
+   *       403:
+   *         description: Access denied - Admin role required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponse'
+   *       500:
+   *         description: Database setup failed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponse'
+   */
+  public static async setupDatabase(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          success: false,
+          message: 'User not authenticated',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Check if user has admin role
+      if (req.user.role !== 'admin') {
+        res.status(HTTP_STATUS.FORBIDDEN).json({
+          success: false,
+          message: 'Access denied. Admin role required.',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Execute the seed command
+      const { stdout, stderr } = await execAsync('npm run seed');
+      
+      if (stderr && !stderr.includes('npm WARN')) {
+        throw new Error(`Database setup failed: ${stderr}`);
+      }
+
+      res.status(HTTP_STATUS.OK).json({
+        success: true,
+        message: 'Database setup completed successfully',
+        data: {
+          output: stdout,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Database setup failed',
         error: error.message,
         timestamp: new Date().toISOString(),
       });

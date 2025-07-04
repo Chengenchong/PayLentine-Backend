@@ -19,4 +19,7 @@ router.post('/login', AuthController.login);
 router.get('/profile', authenticateToken, AuthController.getProfile);
 router.put('/change-password', authenticateToken, AuthController.changePassword);
 
+// Admin routes
+router.post('/setup-database', authenticateToken, AuthController.setupDatabase);
+
 export default router; 

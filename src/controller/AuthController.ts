@@ -287,19 +287,11 @@ export class AuthController {
    * @swagger
    * /api/auth/setup-database:
    *   post:
-   *     summary: Initialize database tables and seed data (Admin only)
+   *     summary: Initialize database tables and seed data (No authentication required)
    *     tags: [Authentication]
-   *     security:
-   *       - bearerAuth: []
    *     responses:
    *       200:
    *         description: Database setup completed successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ApiResponse'
-   *       403:
-   *         description: Access denied - Admin role required
    *         content:
    *           application/json:
    *             schema:
@@ -311,27 +303,8 @@ export class AuthController {
    *             schema:
    *               $ref: '#/components/schemas/ApiResponse'
    */
-  public static async setupDatabase(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public static async setupDatabase(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user) {
-        res.status(HTTP_STATUS.UNAUTHORIZED).json({
-          success: false,
-          message: 'User not authenticated',
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
-      // Check if user has admin role
-      if (req.user.role !== 'admin') {
-        res.status(HTTP_STATUS.FORBIDDEN).json({
-          success: false,
-          message: 'Access denied. Admin role required.',
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
       // Execute the seed command
       const { stdout, stderr } = await execAsync('npm run seed');
       

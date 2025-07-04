@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authRoutes from './auth';
+import walletRoutes from './wallet';
 
 const router = Router();
 
@@ -31,6 +32,9 @@ const router = Router();
 
 // Mount authentication routes
 router.use('/auth', authRoutes);
+
+// Mount wallet routes
+router.use('/wallet', walletRoutes);
 
 // Health check route (also available at root level)
 router.get('/health', (req, res) => {

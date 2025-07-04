@@ -1,12 +1,22 @@
 import sequelize from '../database';
 import User from './User';
+import Wallet from './wallet';
 
-// Define associations here if needed
-// Example: User.hasMany(Post); Post.belongsTo(User);
+// Define associations here
+User.hasMany(Wallet, { 
+  foreignKey: 'userId', 
+  as: 'wallets' 
+});
+
+Wallet.belongsTo(User, { 
+  foreignKey: 'userId', 
+  as: 'user' 
+});
 
 // Export all models
 export {
   User,
+  Wallet,
 };
 
 // Export sequelize instance

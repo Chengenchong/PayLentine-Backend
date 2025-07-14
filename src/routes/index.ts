@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth';
 import walletRoutes from './wallet';
+import communityMarketRoutes from './communityMarket';
 
 const router = Router();
 
@@ -35,6 +36,9 @@ router.use('/auth', authRoutes);
 
 // Mount wallet routes
 router.use('/wallet', walletRoutes);
+
+// Mount community market routes
+router.use('/community-market', communityMarketRoutes);
 
 // Health check route (also available at root level)
 router.get('/health', (req, res) => {

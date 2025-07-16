@@ -12,14 +12,16 @@ export interface MultiSigSettingsAttributes {
   updatedAt?: Date;
 }
 
-interface MultiSigSettingsCreationAttributes extends Optional<
-  MultiSigSettingsAttributes,
-  'id' | 'isEnabled' | 'requiresSeedPhrase' | 'createdAt' | 'updatedAt'
-> {}
+interface MultiSigSettingsCreationAttributes
+  extends Optional<
+    MultiSigSettingsAttributes,
+    'id' | 'isEnabled' | 'requiresSeedPhrase' | 'createdAt' | 'updatedAt'
+  > {}
 
-class MultiSigSettings extends Model<MultiSigSettingsAttributes, MultiSigSettingsCreationAttributes> 
-  implements MultiSigSettingsAttributes {
-  
+class MultiSigSettings
+  extends Model<MultiSigSettingsAttributes, MultiSigSettingsCreationAttributes>
+  implements MultiSigSettingsAttributes
+{
   public id!: number;
   public userId!: number;
   public isEnabled!: boolean;
@@ -33,7 +35,11 @@ class MultiSigSettings extends Model<MultiSigSettingsAttributes, MultiSigSetting
 
   // Instance methods
   public shouldTriggerMultiSig(amount: number): boolean {
-    return this.isEnabled && amount >= this.thresholdAmount && this.signerUserId !== null;
+    return (
+      this.isEnabled &&
+      amount >= this.thresholdAmount &&
+      this.signerUserId !== null
+    );
   }
 
   public hasValidSigner(): boolean {
@@ -54,7 +60,7 @@ MultiSigSettings.init(
       unique: true,
       field: 'user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
@@ -68,7 +74,7 @@ MultiSigSettings.init(
     thresholdAmount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
-      defaultValue: 1000.00,
+      defaultValue: 1000.0,
       field: 'threshold_amount',
       validate: {
         min: 0.01,
@@ -80,7 +86,7 @@ MultiSigSettings.init(
       allowNull: true,
       field: 'signer_user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'SET NULL',

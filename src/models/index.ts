@@ -3,6 +3,8 @@ import User from './User';
 import Wallet from './wallet';
 import CommunityOffer from './CommunityOffer';
 import UserKYC from './UserKYC';
+import MultiSigSettings from './MultiSigSettings';
+import PendingTransaction from './PendingTransaction';
 
 // Define associations here
 User.hasMany(Wallet, { 
@@ -37,12 +39,56 @@ UserKYC.belongsTo(User, {
   as: 'user'
 });
 
+// MultiSig Settings associations
+User.hasOne(MultiSigSettings, {
+  foreignKey: 'userId',
+  as: 'multiSigSettings'
+});
+
+MultiSigSettings.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+MultiSigSettings.belongsTo(User, {
+  foreignKey: 'signerUserId',
+  as: 'signer'
+});
+
+// Pending Transaction associations
+User.hasMany(PendingTransaction, {
+  foreignKey: 'initiatorUserId',
+  as: 'initiatedTransactions'
+});
+
+User.hasMany(PendingTransaction, {
+  foreignKey: 'signerUserId',
+  as: 'pendingApprovals'
+});
+
+PendingTransaction.belongsTo(User, {
+  foreignKey: 'initiatorUserId',
+  as: 'initiator'
+});
+
+PendingTransaction.belongsTo(User, {
+  foreignKey: 'signerUserId',
+  as: 'signer'
+});
+
+PendingTransaction.belongsTo(User, {
+  foreignKey: 'recipientUserId',
+  as: 'recipient'
+});
+
 // Export all models
 export {
   User,
   Wallet,
   CommunityOffer,
   UserKYC,
+  MultiSigSettings,
+  PendingTransaction,
 };
 
 // Export sequelize instance

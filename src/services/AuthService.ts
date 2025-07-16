@@ -24,7 +24,8 @@ interface AuthResponse {
 }
 
 export class AuthService {
-  private static readonly JWT_SECRET = process.env.JWT_SECRET || 'default-secret';
+  private static readonly JWT_SECRET =
+    process.env.JWT_SECRET || 'default-secret';
   private static readonly JWT_EXPIRY = process.env.JWT_EXPIRY || '24h';
   private static readonly SALT_ROUNDS = 12;
 
@@ -38,29 +39,32 @@ export class AuthService {
   /**
    * Compare password
    */
-  public static async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
+  public static async comparePassword(
+    password: string,
+    hashedPassword: string
+  ): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
   }
 
   /**
    * Generate JWT token
    */
-  public static generateToken(userId: number, email: string, role: string): string {
-    const payload = { 
-      userId, 
-      email, 
-      role 
+  public static generateToken(
+    userId: number,
+    email: string,
+    role: string
+  ): string {
+    const payload = {
+      userId,
+      email,
+      role,
     };
-    
-    return jwt.sign(
-      payload, 
-      this.JWT_SECRET, 
-      { 
-        expiresIn: '24h',
-        issuer: 'paylentine-backend',
-        audience: 'paylentine-app'
-      }
-    );
+
+    return jwt.sign(payload, this.JWT_SECRET, {
+      expiresIn: '24h',
+      issuer: 'paylentine-backend',
+      audience: 'paylentine-app',
+    });
   }
 
   /**
@@ -77,10 +81,14 @@ export class AuthService {
   /**
    * Register new user
    */
-  public static async register(userData: RegisterData): Promise<ApiResponse<AuthResponse>> {
+  public static async register(
+    userData: RegisterData
+  ): Promise<ApiResponse<AuthResponse>> {
     try {
       // Check if user already exists
-      const existingUser = await User.findOne({ where: { email: userData.email } });
+      const existingUser = await User.findOne({
+        where: { email: userData.email },
+      });
       if (existingUser) {
         return errorResponse('User with this email already exists');
       }
@@ -130,7 +138,9 @@ export class AuthService {
   /**
    * Login user
    */
-  public static async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
+  public static async login(
+    credentials: LoginCredentials
+  ): Promise<ApiResponse<AuthResponse>> {
     try {
       // Find user by email
       const user = await User.findOne({ where: { email: credentials.email } });
@@ -144,7 +154,10 @@ export class AuthService {
       }
 
       // Compare password
-      const isPasswordValid = await this.comparePassword(credentials.password, user.password);
+      const isPasswordValid = await this.comparePassword(
+        credentials.password,
+        user.password
+      );
       if (!isPasswordValid) {
         return errorResponse('Invalid email or password');
       }
@@ -245,7 +258,10 @@ export class AuthService {
       }
 
       // Verify current password
-      const isCurrentPasswordValid = await this.comparePassword(currentPassword, user.password);
+      const isCurrentPasswordValid = await this.comparePassword(
+        currentPassword,
+        user.password
+      );
       if (!isCurrentPasswordValid) {
         return errorResponse('Current password is incorrect');
       }
@@ -261,4 +277,4 @@ export class AuthService {
       return errorResponse('Failed to change password', error.message);
     }
   }
-} 
+}

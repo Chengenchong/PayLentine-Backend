@@ -1,8 +1,18 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../database';
 
-export type KYCStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'requires_update';
-export type DocumentType = 'passport' | 'national_id' | 'drivers_license' | 'utility_bill' | 'bank_statement';
+export type KYCStatus =
+  | 'pending'
+  | 'under_review'
+  | 'approved'
+  | 'rejected'
+  | 'requires_update';
+export type DocumentType =
+  | 'passport'
+  | 'national_id'
+  | 'drivers_license'
+  | 'utility_bill'
+  | 'bank_statement';
 export type KYCLevel = 'basic' | 'intermediate' | 'advanced';
 
 interface UserKYCAttributes {
@@ -34,16 +44,27 @@ interface UserKYCAttributes {
   updatedAt?: Date;
 }
 
-interface UserKYCCreationAttributes extends Optional<
-  UserKYCAttributes,
-  'id' | 'status' | 'verificationNotes' | 'rejectionReason' | 'reviewedAt' | 
-  'approvedAt' | 'expiresAt' | 'riskScore' | 'ipAddress' | 'deviceFingerprint' | 
-  'createdAt' | 'updatedAt'
-> {}
+interface UserKYCCreationAttributes
+  extends Optional<
+    UserKYCAttributes,
+    | 'id'
+    | 'status'
+    | 'verificationNotes'
+    | 'rejectionReason'
+    | 'reviewedAt'
+    | 'approvedAt'
+    | 'expiresAt'
+    | 'riskScore'
+    | 'ipAddress'
+    | 'deviceFingerprint'
+    | 'createdAt'
+    | 'updatedAt'
+  > {}
 
-class UserKYC extends Model<UserKYCAttributes, UserKYCCreationAttributes> 
-  implements UserKYCAttributes {
-  
+class UserKYC
+  extends Model<UserKYCAttributes, UserKYCCreationAttributes>
+  implements UserKYCAttributes
+{
   public id!: number;
   public userId!: number;
   public kycLevel!: KYCLevel;
@@ -75,8 +96,10 @@ class UserKYC extends Model<UserKYCAttributes, UserKYCCreationAttributes>
 
   // Instance methods
   public isApproved(): boolean {
-    return this.status === 'approved' && 
-           (!this.expiresAt || this.expiresAt > new Date());
+    return (
+      this.status === 'approved' &&
+      (!this.expiresAt || this.expiresAt > new Date())
+    );
   }
 
   public isExpired(): boolean {
@@ -88,13 +111,18 @@ class UserKYC extends Model<UserKYCAttributes, UserKYCCreationAttributes>
     this.approvedAt = new Date();
     this.reviewedAt = new Date();
     if (notes) this.verificationNotes = notes;
-    
+
     // Set expiration based on KYC level (basic: 1 year, intermediate: 2 years, advanced: 3 years)
-    const expirationMonths = this.kycLevel === 'basic' ? 12 : this.kycLevel === 'intermediate' ? 24 : 36;
+    const expirationMonths =
+      this.kycLevel === 'basic'
+        ? 12
+        : this.kycLevel === 'intermediate'
+        ? 24
+        : 36;
     const expiration = new Date();
     expiration.setMonth(expiration.getMonth() + expirationMonths);
     this.expiresAt = expiration;
-    
+
     await this.save();
   }
 
@@ -114,31 +142,33 @@ class UserKYC extends Model<UserKYCAttributes, UserKYCCreationAttributes>
 
   public getComplianceLevel(): number {
     if (!this.isApproved()) return 0;
-    
+
     let score = 0;
-    
+
     // Base score for approval
     score += 40;
-    
+
     // Level bonus
     if (this.kycLevel === 'basic') score += 20;
     else if (this.kycLevel === 'intermediate') score += 35;
     else if (this.kycLevel === 'advanced') score += 50;
-    
+
     // Document completeness
     score += Math.min(this.documentsSubmitted.length * 5, 20);
-    
+
     // Risk score (lower is better)
     if (this.riskScore) {
       score -= Math.max(0, (this.riskScore - 50) / 10); // Penalty for high risk
     }
-    
+
     // Age penalty for old KYC
     if (this.approvedAt) {
-      const monthsOld = Math.floor((Date.now() - this.approvedAt.getTime()) / (1000 * 60 * 60 * 24 * 30));
+      const monthsOld = Math.floor(
+        (Date.now() - this.approvedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
+      );
       score -= monthsOld; // 1 point per month
     }
-    
+
     return Math.max(0, Math.min(100, score));
   }
 
@@ -158,15 +188,15 @@ class UserKYC extends Model<UserKYCAttributes, UserKYCCreationAttributes>
     const baseLimits = {
       basic: { daily: 1000, monthly: 10000, single: 500 },
       intermediate: { daily: 5000, monthly: 50000, single: 2500 },
-      advanced: { daily: 25000, monthly: 250000, single: 10000 }
+      advanced: { daily: 25000, monthly: 250000, single: 10000 },
     };
 
     const limits = baseLimits[this.kycLevel];
-    
+
     return {
       dailyLimit: Math.floor(limits.daily * multiplier),
       monthlyLimit: Math.floor(limits.monthly * multiplier),
-      singleTransactionLimit: Math.floor(limits.single * multiplier)
+      singleTransactionLimit: Math.floor(limits.single * multiplier),
     };
   }
 }
@@ -184,7 +214,7 @@ UserKYC.init(
       unique: true,
       field: 'user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
@@ -196,7 +226,13 @@ UserKYC.init(
       field: 'kyc_level',
     },
     status: {
-      type: DataTypes.ENUM('pending', 'under_review', 'approved', 'rejected', 'requires_update'),
+      type: DataTypes.ENUM(
+        'pending',
+        'under_review',
+        'approved',
+        'rejected',
+        'requires_update'
+      ),
       allowNull: false,
       defaultValue: 'pending',
     },
@@ -264,7 +300,13 @@ UserKYC.init(
           if (!Array.isArray(value)) {
             throw new Error('Documents must be an array');
           }
-          const validTypes = ['passport', 'national_id', 'drivers_license', 'utility_bill', 'bank_statement'];
+          const validTypes = [
+            'passport',
+            'national_id',
+            'drivers_license',
+            'utility_bill',
+            'bank_statement',
+          ];
           for (const doc of value) {
             if (!validTypes.includes(doc)) {
               throw new Error(`Invalid document type: ${doc}`);
@@ -374,7 +416,8 @@ UserKYC.init(
         // Auto-update status if KYC has expired
         if (kyc.isExpired() && kyc.status === 'approved') {
           kyc.status = 'requires_update';
-          kyc.rejectionReason = 'KYC verification has expired and requires renewal';
+          kyc.rejectionReason =
+            'KYC verification has expired and requires renewal';
         }
       },
     },

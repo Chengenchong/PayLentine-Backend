@@ -18,14 +18,16 @@ interface CommunityOfferAttributes {
   updatedAt?: Date;
 }
 
-interface CommunityOfferCreationAttributes extends Optional<
-  CommunityOfferAttributes, 
-  'id' | 'status' | 'tags' | 'createdAt' | 'updatedAt'
-> {}
+interface CommunityOfferCreationAttributes
+  extends Optional<
+    CommunityOfferAttributes,
+    'id' | 'status' | 'tags' | 'createdAt' | 'updatedAt'
+  > {}
 
-class CommunityOffer extends Model<CommunityOfferAttributes, CommunityOfferCreationAttributes> 
-  implements CommunityOfferAttributes {
-  
+class CommunityOffer
+  extends Model<CommunityOfferAttributes, CommunityOfferCreationAttributes>
+  implements CommunityOfferAttributes
+{
   public id!: number;
   public userId!: number;
   public offerType!: OfferType;
@@ -68,7 +70,7 @@ class CommunityOffer extends Model<CommunityOfferAttributes, CommunityOfferCreat
       status: this.status,
       tags: this.tags,
       isActive: this.isActive(),
-      createdAt: this.createdAt
+      createdAt: this.createdAt,
     };
   }
 }
@@ -79,16 +81,18 @@ CommunityOffer.init(
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
-    },    userId: {
+    },
+    userId: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       field: 'user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
-    },    offerType: {
+    },
+    offerType: {
       type: DataTypes.ENUM('buy', 'sell'),
       allowNull: false,
       field: 'offer_type',
@@ -142,7 +146,8 @@ CommunityOffer.init(
           }
         },
       },
-    },    createdAt: {
+    },
+    createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -159,7 +164,8 @@ CommunityOffer.init(
     sequelize,
     modelName: 'CommunityOffer',
     tableName: 'community_offers',
-    timestamps: true,    indexes: [
+    timestamps: true,
+    indexes: [
       {
         fields: ['user_id'],
       },

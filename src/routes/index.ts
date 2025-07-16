@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import authRoutes from './auth';
 import walletRoutes from './wallet';
+import communityMarketRoutes from './communityMarket';
+import kycRoutes from './kyc';
+import multisigRoutes from './multisig';
 
 const router = Router();
 
@@ -35,6 +38,15 @@ router.use('/auth', authRoutes);
 
 // Mount wallet routes
 router.use('/wallet', walletRoutes);
+
+// Mount community market routes
+router.use('/community-market', communityMarketRoutes);
+
+// Mount KYC routes
+router.use('/kyc', kycRoutes);
+
+// Mount Multi-Signature routes
+router.use('/multisig', multisigRoutes);
 
 // Health check route (also available at root level)
 router.get('/health', (req, res) => {

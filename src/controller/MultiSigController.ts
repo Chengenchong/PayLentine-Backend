@@ -1,0 +1,553 @@
+import { Response } from 'express';
+import { CustomRequest } from '../types/express';
+import { MultiSigService } from '../services/MultiSigService';
+import { PendingTransactionType } from '../models/PendingTransaction';
+
+export class MultiSigController {
+  /**
+   * Get user's multi-signature settings
+   */
+  static async getSettings(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const settings = await MultiSigService.getSettings(parseInt(userId));
+
+      if (!settings) {
+        res.json({
+          hasSettings: false,
+          settings: {
+            isEnabled: false,
+            thresholdAmount: 1000,
+            signerUserId: null,
+            requiresSeedPhrase: true
+          }
+        });
+        return;
+      }
+
+      res.json({
+        hasSettings: true,
+        settings: {
+          id: settings.id,
+          isEnabled: settings.isEnabled,
+          thresholdAmount: parseFloat(settings.thresholdAmount.toString()),
+          signerUserId: settings.signerUserId,
+          requiresSeedPhrase: settings.requiresSeedPhrase,
+          signer: (settings as any).signer || null,
+          createdAt: settings.createdAt,
+          updatedAt: settings.updatedAt
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Update user's multi-signature settings
+   */
+  static async updateSettings(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const {
+        isEnabled,
+        thresholdAmount,
+        signerUserId,
+        requiresSeedPhrase,
+        seedPhrase
+      } = req.body;
+
+      // Validation
+      if (typeof isEnabled !== 'boolean') {
+        res.status(400).json({ error: 'isEnabled must be a boolean' });
+        return;
+      }
+
+      if (thresholdAmount && (typeof thresholdAmount !== 'number' || thresholdAmount < 0.01)) {
+        res.status(400).json({ error: 'thresholdAmount must be a positive number >= 0.01' });
+        return;
+      }
+
+      if (signerUserId && parseInt(signerUserId) === parseInt(userId)) {
+        res.status(400).json({ error: 'Cannot set yourself as the signer' });
+        return;
+      }
+
+      // Validate seed phrase if provided
+      let seedPhraseVerified = false;
+      if (seedPhrase) {
+        seedPhraseVerified = await MultiSigService.validateSeedPhrase(parseInt(userId), seedPhrase);
+        if (!seedPhraseVerified) {
+          res.status(400).json({ error: 'Invalid seed phrase' });
+          return;
+        }
+      }
+
+      const settings = await MultiSigService.updateSettings(
+        parseInt(userId),
+        {
+          isEnabled,
+          thresholdAmount,
+          signerUserId: signerUserId ? parseInt(signerUserId) : undefined,
+          requiresSeedPhrase
+        },
+        seedPhraseVerified
+      );
+
+      res.json({
+        message: 'Multi-signature settings updated successfully',
+        settings: {
+          id: settings.id,
+          isEnabled: settings.isEnabled,
+          thresholdAmount: parseFloat(settings.thresholdAmount.toString()),
+          signerUserId: settings.signerUserId,
+          requiresSeedPhrase: settings.requiresSeedPhrase
+        }
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Check if a transaction requires multi-signature approval
+   */
+  static async checkMultiSigRequired(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { amount } = req.query;
+
+      if (!amount) {
+        res.status(400).json({ error: 'Amount is required' });
+        return;
+      }
+
+      const transactionAmount = parseFloat(amount as string);
+      if (isNaN(transactionAmount) || transactionAmount <= 0) {
+        res.status(400).json({ error: 'Amount must be a positive number' });
+        return;
+      }
+
+      const result = await MultiSigService.checkMultiSigRequired(parseInt(userId), transactionAmount);
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Create a pending transaction for multi-sig approval
+   */
+  static async createPendingTransaction(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const {
+        transactionType,
+        amount,
+        currency,
+        recipientAddress,
+        recipientUserId,
+        description,
+        transactionData,
+        expiresInHours
+      } = req.body;
+
+      // Validation
+      if (!transactionType || !['wallet_transfer', 'community_market', 'withdrawal', 'payment'].includes(transactionType)) {
+        res.status(400).json({ error: 'Invalid transaction type' });
+        return;
+      }
+
+      if (!amount || typeof amount !== 'number' || amount <= 0) {
+        res.status(400).json({ error: 'Amount must be a positive number' });
+        return;
+      }
+
+      // Check if multi-sig is required
+      const multiSigCheck = await MultiSigService.checkMultiSigRequired(parseInt(userId), amount);
+      if (!multiSigCheck.requiresMultiSig) {
+        res.status(400).json({ error: 'Multi-signature not required for this transaction', reason: multiSigCheck.reason });
+        return;
+      }
+
+      const pendingTransaction = await MultiSigService.createPendingTransaction({
+        initiatorUserId: parseInt(userId),
+        signerUserId: multiSigCheck.signerUserId!,
+        transactionType: transactionType as PendingTransactionType,
+        amount,
+        currency,
+        recipientAddress,
+        recipientUserId: recipientUserId ? parseInt(recipientUserId) : undefined,
+        description,
+        transactionData,
+        expiresInHours
+      });
+
+      res.status(201).json({
+        message: 'Pending transaction created successfully',
+        transaction: {
+          id: pendingTransaction.id,
+          status: pendingTransaction.status,
+          amount: parseFloat(pendingTransaction.amount.toString()),
+          expiresAt: pendingTransaction.expiresAt,
+          signerUserId: pendingTransaction.signerUserId
+        }
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Get pending transactions that need approval (for signer)
+   */
+  static async getPendingApprovals(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const {
+        status = 'pending',
+        transactionType,
+        page = 1,
+        limit = 20,
+        sortBy = 'createdAt',
+        sortOrder = 'DESC'
+      } = req.query;
+
+      const result = await MultiSigService.getPendingApprovals(
+        parseInt(userId),
+        {
+          status: typeof status === 'string' ? status.split(',') : (status as string[]),
+          transactionType: typeof transactionType === 'string' ? transactionType.split(',') : (transactionType as string[])
+        },
+        {
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          sortBy: sortBy as any,
+          sortOrder: sortOrder as 'ASC' | 'DESC'
+        }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Get user's initiated transactions
+   */
+  static async getInitiatedTransactions(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const {
+        status,
+        transactionType,
+        page = 1,
+        limit = 20,
+        sortBy = 'createdAt',
+        sortOrder = 'DESC'
+      } = req.query;
+
+      const result = await MultiSigService.getInitiatedTransactions(
+        parseInt(userId),
+        {
+          status: typeof status === 'string' ? status.split(',') : (status as string[]),
+          transactionType: typeof transactionType === 'string' ? transactionType.split(',') : (transactionType as string[])
+        },
+        {
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          sortBy: sortBy as any,
+          sortOrder: sortOrder as 'ASC' | 'DESC'
+        }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Approve a pending transaction
+   */
+  static async approveTransaction(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+      const { message } = req.body;
+
+      const transactionId = parseInt(id);
+      if (isNaN(transactionId)) {
+        res.status(400).json({ error: 'Invalid transaction ID' });
+        return;
+      }
+
+      const transaction = await MultiSigService.approveTransaction(
+        transactionId,
+        parseInt(userId),
+        message
+      );
+
+      res.json({
+        message: 'Transaction approved successfully',
+        transaction: {
+          id: transaction.id,
+          status: transaction.status,
+          approvedAt: transaction.approvedAt,
+          approvalMessage: transaction.approvalMessage
+        }
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Reject a pending transaction
+   */
+  static async rejectTransaction(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      const transactionId = parseInt(id);
+      if (isNaN(transactionId)) {
+        res.status(400).json({ error: 'Invalid transaction ID' });
+        return;
+      }
+
+      if (!reason || reason.trim().length === 0) {
+        res.status(400).json({ error: 'Rejection reason is required' });
+        return;
+      }
+
+      const transaction = await MultiSigService.rejectTransaction(
+        transactionId,
+        parseInt(userId),
+        reason
+      );
+
+      res.json({
+        message: 'Transaction rejected successfully',
+        transaction: {
+          id: transaction.id,
+          status: transaction.status,
+          rejectedAt: transaction.rejectedAt,
+          rejectionReason: transaction.rejectionReason
+        }
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Cancel a pending transaction (by initiator)
+   */
+  static async cancelTransaction(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+
+      const transactionId = parseInt(id);
+      if (isNaN(transactionId)) {
+        res.status(400).json({ error: 'Invalid transaction ID' });
+        return;
+      }
+
+      const transaction = await MultiSigService.cancelTransaction(
+        transactionId,
+        parseInt(userId)
+      );
+
+      res.json({
+        message: 'Transaction cancelled successfully',
+        transaction: {
+          id: transaction.id,
+          status: transaction.status
+        }
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Get transaction details by ID
+   */
+  static async getTransactionById(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+
+      const transactionId = parseInt(id);
+      if (isNaN(transactionId)) {
+        res.status(400).json({ error: 'Invalid transaction ID' });
+        return;
+      }
+
+      const transaction = await MultiSigService.getTransactionById(transactionId);
+
+      if (!transaction) {
+        res.status(404).json({ error: 'Transaction not found' });
+        return;
+      }
+
+      // Check if user has permission to view this transaction
+      const userIdNum = parseInt(userId);
+      if (transaction.initiatorUserId !== userIdNum && transaction.signerUserId !== userIdNum) {
+        res.status(403).json({ error: 'Access denied' });
+        return;
+      }
+
+      res.json({
+        transaction: {
+          id: transaction.id,
+          initiatorUserId: transaction.initiatorUserId,
+          signerUserId: transaction.signerUserId,
+          transactionType: transaction.transactionType,
+          amount: parseFloat(transaction.amount.toString()),
+          currency: transaction.currency,
+          recipientAddress: transaction.recipientAddress,
+          recipientUserId: transaction.recipientUserId,
+          description: transaction.description,
+          transactionData: transaction.transactionData,
+          status: transaction.status,
+          expiresAt: transaction.expiresAt,
+          approvedAt: transaction.approvedAt,
+          rejectedAt: transaction.rejectedAt,
+          approvalMessage: transaction.approvalMessage,
+          rejectionReason: transaction.rejectionReason,
+          timeRemaining: transaction.getTimeRemaining(),
+          timeRemainingHours: transaction.getTimeRemainingHours(),
+          initiator: (transaction as any).initiator,
+          signer: (transaction as any).signer,
+          recipient: (transaction as any).recipient,
+          createdAt: transaction.createdAt,
+          updatedAt: transaction.updatedAt
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Get multi-sig statistics for current user
+   */
+  static async getStats(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const stats = await MultiSigService.getMultiSigStats(parseInt(userId));
+
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Validate seed phrase
+   */
+  static async validateSeedPhrase(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { seedPhrase } = req.body;
+
+      if (!seedPhrase || typeof seedPhrase !== 'string') {
+        res.status(400).json({ error: 'Seed phrase is required' });
+        return;
+      }
+
+      const isValid = await MultiSigService.validateSeedPhrase(parseInt(userId), seedPhrase);
+
+      res.json({
+        valid: isValid,
+        message: isValid ? 'Seed phrase is valid' : 'Invalid seed phrase'
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Clean up expired transactions (Admin function)
+   */
+  static async cleanupExpiredTransactions(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const updatedCount = await MultiSigService.cleanupExpiredTransactions();
+
+      res.json({
+        message: 'Expired transactions cleaned up successfully',
+        updatedCount
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+export default MultiSigController;

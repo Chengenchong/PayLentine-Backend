@@ -2,6 +2,8 @@ import { seedAdminUser } from './adminSeeder';
 import { seedTestUsers } from './testUsersSeeder';
 import { seedUserKYC } from './userKYCSeeder';
 import { seedCommunityOffers } from './communityMarketSeeder';
+import { seedMultiSigSettings } from './multiSigSeeder';
+import { seedPendingTransactions } from './pendingTransactionSeeder';
 import { testConnection, syncDatabase } from '../index';
 
 export const runAllSeeders = async (): Promise<void> => {
@@ -18,6 +20,8 @@ export const runAllSeeders = async (): Promise<void> => {
     await seedTestUsers();
     await seedUserKYC();
     await seedCommunityOffers();
+    await seedMultiSigSettings();
+    await seedPendingTransactions();
     
     console.log('✅ Database seeding completed successfully!');
   } catch (error: any) {
@@ -31,3 +35,5 @@ export { seedAdminUser } from './adminSeeder';
 export { seedTestUsers } from './testUsersSeeder';
 export { seedUserKYC } from './userKYCSeeder';
 export { seedCommunityOffers } from './communityMarketSeeder';
+export { seedMultiSigSettings } from './multiSigSeeder';
+export { seedPendingTransactions } from './pendingTransactionSeeder';

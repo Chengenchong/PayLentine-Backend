@@ -136,6 +136,78 @@ export class AuthController {
 
   /**
    * @swagger
+   * /api/auth/seed-phrase-login:
+   *   post:
+   *     summary: Authenticate user with seed phrase
+   *     tags: [Authentication]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - email
+   *               - seedPhrase
+   *             properties:
+   *               email:
+   *                 type: string
+   *                 format: email
+   *                 description: User's email address
+   *               seedPhrase:
+   *                 type: string
+   *                 description: 12-word seed phrase separated by spaces
+   *                 example: "abandon ability able about above absent absorb abstract absurd abuse access accident"
+   *     responses:
+   *       200:
+   *         description: Seed phrase authentication successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               allOf:
+   *                 - $ref: '#/components/schemas/ApiResponse'
+   *                 - type: object
+   *                   properties:
+   *                     data:
+   *                       $ref: '#/components/schemas/AuthResponse'
+   *       401:
+   *         description: Invalid credentials
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponse'
+   */
+  public static async seedPhraseLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, seedPhrase } = req.body;
+
+      // Validate required fields
+      if (!email || !seedPhrase) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'Email and seed phrase are required',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Authenticate with seed phrase
+      const result = await AuthService.authenticateWithSeedPhrase(email, seedPhrase);
+
+      const statusCode = result.success ? HTTP_STATUS.OK : HTTP_STATUS.UNAUTHORIZED;
+      res.status(statusCode).json(result);
+    } catch (error: any) {
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Internal server error',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  /**
+   * @swagger
    * /api/auth/profile:
    *   get:
    *     summary: Get current user profile

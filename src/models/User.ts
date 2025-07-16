@@ -9,13 +9,14 @@ interface UserAttributes {
   lastName: string;
   role: 'admin' | 'user';
   isActive: boolean;
+  seedPhraseHash: string;
   profilePicture?: string;
   lastLoginAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt' | 'lastLoginAt' | 'profilePicture' | 'isActive' | 'role'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt' | 'lastLoginAt' | 'profilePicture' | 'isActive' | 'role' | 'seedPhraseHash'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -25,6 +26,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public lastName!: string;
   public role!: 'admin' | 'user';
   public isActive!: boolean;
+  public seedPhraseHash!: string;
   public profilePicture?: string;
   public lastLoginAt?: Date;
 
@@ -41,6 +43,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public toJSON(): Partial<UserAttributes> {
     const values = { ...this.get() } as any;
     delete values.password; // Never return password in JSON
+    delete values.seedPhraseHash; // Never return seed phrase hash in JSON
     return values;
   }
 }
@@ -91,6 +94,13 @@ User.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
+    },
+    seedPhraseHash: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
+      validate: {
+        len: [1, 500],
+      },
     },
     profilePicture: {
       type: DataTypes.STRING(500),

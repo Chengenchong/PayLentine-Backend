@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import { ApiResponse } from '../types/express';
-import { successResponse, errorResponse } from '../utils';
+import { successResponse, errorResponse, SeedPhraseGenerator } from '../utils';
 
 interface LoginCredentials {
   email: string;
@@ -20,6 +20,7 @@ interface RegisterData {
 interface AuthResponse {
   user: Partial<typeof User.prototype>;
   token: string;
+  seedPhrase?: string; // Only returned during registration
 }
 
 export class AuthService {
@@ -87,6 +88,18 @@ export class AuthService {
       // Hash password
       const hashedPassword = await this.hashPassword(userData.password);
 
+      // Generate unique seed phrase
+      const seedPhrase = await SeedPhraseGenerator.generateUniqueSeedPhrase(
+        async (phrase: string) => {
+          const hashedPhrase = SeedPhraseGenerator.hashSeedPhrase(phrase);
+          const existingUser = await User.findOne({ where: { seedPhraseHash: hashedPhrase } });
+          return !!existingUser;
+        }
+      );
+
+      // Hash the seed phrase for storage
+      const seedPhraseHash = SeedPhraseGenerator.hashSeedPhrase(seedPhrase);
+
       // Create user with explicit role assignment
       const user = await User.create({
         email: userData.email,
@@ -95,17 +108,19 @@ export class AuthService {
         lastName: userData.lastName,
         role: userData.role || 'user', // Ensure role is always defined
         isActive: true,
+        seedPhraseHash,
       });
 
       // Generate token
       const token = this.generateToken(user.id, user.email, user.role);
 
-      // Return response without password
+      // Return response without password but include seed phrase for user to save
       const userResponse = user.toJSON();
 
       return successResponse('User registered successfully', {
         user: userResponse,
         token,
+        seedPhrase, // Return the plain seed phrase ONLY during registration
       });
     } catch (error: any) {
       return errorResponse('Registration failed', error.message);
@@ -149,6 +164,58 @@ export class AuthService {
       });
     } catch (error: any) {
       return errorResponse('Login failed', error.message);
+    }
+  }
+
+  /**
+   * Authenticate user with seed phrase
+   */
+  public static async authenticateWithSeedPhrase(
+    email: string,
+    seedPhrase: string
+  ): Promise<ApiResponse<AuthResponse>> {
+    try {
+      // Validate seed phrase format
+      if (!SeedPhraseGenerator.validateSeedPhraseFormat(seedPhrase)) {
+        return errorResponse('Invalid seed phrase format');
+      }
+
+      // Find user by email
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return errorResponse('Invalid email or seed phrase');
+      }
+
+      // Check if user is active
+      if (!user.isActive) {
+        return errorResponse('Account is disabled');
+      }
+
+      // Verify seed phrase
+      const isSeedPhraseValid = SeedPhraseGenerator.verifySeedPhrase(
+        seedPhrase,
+        user.seedPhraseHash
+      );
+
+      if (!isSeedPhraseValid) {
+        return errorResponse('Invalid email or seed phrase');
+      }
+
+      // Update last login
+      await user.update({ lastLoginAt: new Date() });
+
+      // Generate token
+      const token = this.generateToken(user.id, user.email, user.role);
+
+      // Return response without sensitive data
+      const userResponse = user.toJSON();
+
+      return successResponse('Seed phrase authentication successful', {
+        user: userResponse,
+        token,
+      });
+    } catch (error: any) {
+      return errorResponse('Seed phrase authentication failed', error.message);
     }
   }
 

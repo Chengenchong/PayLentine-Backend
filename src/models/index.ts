@@ -2,6 +2,7 @@ import sequelize from '../database';
 import User from './User';
 import Wallet from './wallet';
 import CommunityOffer from './CommunityOffer';
+import UserKYC from './UserKYC';
 
 // Define associations here
 User.hasMany(Wallet, { 
@@ -25,11 +26,23 @@ CommunityOffer.belongsTo(User, {
   as: 'user'
 });
 
+// UserKYC associations
+User.hasOne(UserKYC, {
+  foreignKey: 'userId',
+  as: 'kyc'
+});
+
+UserKYC.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
 // Export all models
 export {
   User,
   Wallet,
   CommunityOffer,
+  UserKYC,
 };
 
 // Export sequelize instance

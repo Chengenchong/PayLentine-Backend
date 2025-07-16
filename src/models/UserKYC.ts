@@ -182,6 +182,7 @@ UserKYC.init(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       unique: true,
+      field: 'user_id',
       references: {
         model: 'Users',
         key: 'id',
@@ -192,6 +193,7 @@ UserKYC.init(
       type: DataTypes.ENUM('basic', 'intermediate', 'advanced'),
       allowNull: false,
       defaultValue: 'basic',
+      field: 'kyc_level',
     },
     status: {
       type: DataTypes.ENUM('pending', 'under_review', 'approved', 'rejected', 'requires_update'),
@@ -201,6 +203,7 @@ UserKYC.init(
     firstName: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      field: 'first_name',
       validate: {
         len: [2, 100],
       },
@@ -208,6 +211,7 @@ UserKYC.init(
     lastName: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      field: 'last_name',
       validate: {
         len: [2, 100],
       },
@@ -215,6 +219,7 @@ UserKYC.init(
     dateOfBirth: {
       type: DataTypes.DATEONLY,
       allowNull: false,
+      field: 'date_of_birth',
       validate: {
         isDate: true,
         isBefore: new Date().toISOString(), // Must be in the past
@@ -235,6 +240,7 @@ UserKYC.init(
     postalCode: {
       type: DataTypes.STRING(20),
       allowNull: false,
+      field: 'postal_code',
     },
     country: {
       type: DataTypes.STRING(50),
@@ -243,6 +249,7 @@ UserKYC.init(
     phoneNumber: {
       type: DataTypes.STRING(20),
       allowNull: false,
+      field: 'phone_number',
       validate: {
         is: /^\+?[\d\s\-\(\)]+$/,
       },
@@ -251,6 +258,7 @@ UserKYC.init(
       type: DataTypes.JSON,
       allowNull: false,
       defaultValue: [],
+      field: 'documents_submitted',
       validate: {
         isArrayOfValidDocuments(value: any) {
           if (!Array.isArray(value)) {
@@ -269,35 +277,43 @@ UserKYC.init(
       type: DataTypes.JSON,
       allowNull: false,
       defaultValue: [],
+      field: 'document_urls',
     },
     verificationNotes: {
       type: DataTypes.TEXT,
       allowNull: true,
+      field: 'verification_notes',
     },
     rejectionReason: {
       type: DataTypes.TEXT,
       allowNull: true,
+      field: 'rejection_reason',
     },
     submittedAt: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+      field: 'submitted_at',
     },
     reviewedAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'reviewed_at',
     },
     approvedAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'approved_at',
     },
     expiresAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'expires_at',
     },
     riskScore: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      field: 'risk_score',
       validate: {
         min: 0,
         max: 100,
@@ -306,20 +322,24 @@ UserKYC.init(
     ipAddress: {
       type: DataTypes.STRING(45), // IPv6 support
       allowNull: true,
+      field: 'ip_address',
     },
     deviceFingerprint: {
       type: DataTypes.STRING(255),
       allowNull: true,
+      field: 'device_fingerprint',
     },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+      field: 'created_at',
     },
     updatedAt: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+      field: 'updated_at',
     },
   },
   {
@@ -329,24 +349,24 @@ UserKYC.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['userId'],
+        fields: ['user_id'],
         unique: true,
       },
       {
         fields: ['status'],
       },
       {
-        fields: ['kycLevel'],
+        fields: ['kyc_level'],
       },
       {
-        fields: ['submittedAt'],
+        fields: ['submitted_at'],
       },
       {
-        fields: ['expiresAt'],
+        fields: ['expires_at'],
       },
       {
         name: 'kyc_status_level_idx',
-        fields: ['status', 'kycLevel'],
+        fields: ['status', 'kyc_level'],
       },
     ],
     hooks: {

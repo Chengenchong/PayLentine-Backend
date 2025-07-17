@@ -1,5 +1,6 @@
 import { AuthService } from '../../services/AuthService';
 import { User } from '../../models';
+import { SeedPhraseGenerator } from '../../utils';
 
 export const seedAdminUser = async (): Promise<void> => {
   try {
@@ -17,6 +18,10 @@ export const seedAdminUser = async (): Promise<void> => {
     // Create admin user
     const hashedPassword = await AuthService.hashPassword(adminPassword);
     
+    // Generate seed phrase for admin user
+    const seedPhrase = SeedPhraseGenerator.generateSeedPhrase();
+    const seedPhraseHash = SeedPhraseGenerator.hashSeedPhrase(seedPhrase);
+    
     const adminUser = await User.create({
       email: adminEmail,
       password: hashedPassword,
@@ -24,12 +29,15 @@ export const seedAdminUser = async (): Promise<void> => {
       lastName: 'User',
       role: 'admin',
       isActive: true,
+      seedPhraseHash,
     });
 
     console.log('✅ Admin user created successfully:');
     console.log(`   📧 Email: ${adminUser.email}`);
     console.log(`   🔑 Password: ${adminPassword}`);
+    console.log(`   🔐 Seed Phrase: ${seedPhrase}`);
     console.log(`   ⚠️  Please change the default password after first login!`);
+    console.log(`   ⚠️  Please save the seed phrase securely!`);
     
   } catch (error: any) {
     console.error('❌ Error creating admin user:', error.message);

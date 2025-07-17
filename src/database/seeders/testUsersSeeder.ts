@@ -1,5 +1,6 @@
 import { User } from '../../models';
 import { AuthService } from '../../services/AuthService';
+import { SeedPhraseGenerator } from '../../utils';
 
 const testUsers = [
   {
@@ -70,8 +71,14 @@ export const seedTestUsers = async (): Promise<void> => {
 
     // Hash passwords and create users
     const createdUsers = [];
+    const userSeedPhrases: Array<{ email: string; seedPhrase: string }> = [];
+    
     for (const userData of usersToCreate) {
       const hashedPassword = await AuthService.hashPassword(userData.password);
+      
+      // Generate seed phrase for each user
+      const seedPhrase = SeedPhraseGenerator.generateSeedPhrase();
+      const seedPhraseHash = SeedPhraseGenerator.hashSeedPhrase(seedPhrase);
       
       const user = await User.create({
         id: userData.id,
@@ -80,10 +87,12 @@ export const seedTestUsers = async (): Promise<void> => {
         firstName: userData.firstName,
         lastName: userData.lastName,
         role: userData.role as 'user' | 'admin',
-        isActive: userData.isActive
+        isActive: userData.isActive,
+        seedPhraseHash
       });
 
       createdUsers.push(user);
+      userSeedPhrases.push({ email: user.email, seedPhrase });
     }
 
     console.log(`✅ Successfully seeded ${createdUsers.length} test users`);
@@ -92,6 +101,18 @@ export const seedTestUsers = async (): Promise<void> => {
     createdUsers.forEach(user => {
       console.log(`   👤 ${user.firstName} ${user.lastName} (${user.email})`);
     });
+    
+    // Display seed phrases for test users
+    if (userSeedPhrases.length > 0) {
+      console.log('');
+      console.log('🔐 ========= TEST USER SEED PHRASES =========');
+      userSeedPhrases.forEach(({ email, seedPhrase }) => {
+        console.log(`📧 ${email}`);
+        console.log(`🔑 ${seedPhrase}`);
+        console.log('---');
+      });
+      console.log('🔐 ========================================');
+    }
 
   } catch (error: any) {
     console.error('❌ Error seeding test users:', error.message);

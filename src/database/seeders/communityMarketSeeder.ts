@@ -1,6 +1,7 @@
 import { CommunityOffer, User } from '../../models';
 import type { UserTag, OfferType, OfferStatus } from '../../models/CommunityOffer';
 import { AuthService } from '../../services/AuthService';
+import { SeedPhraseGenerator } from '../../utils';
 
 export const seedCommunityOffers = async (): Promise<void> => {
   try {
@@ -21,6 +22,11 @@ export const seedCommunityOffers = async (): Promise<void> => {
       const existingUser = await User.findOne({ where: { email: userData.email } });
       if (!existingUser) {
         const hashedPassword = await AuthService.hashPassword('testpassword123');
+        
+        // Generate seed phrase for each community market user
+        const seedPhrase = SeedPhraseGenerator.generateSeedPhrase();
+        const seedPhraseHash = SeedPhraseGenerator.hashSeedPhrase(seedPhrase);
+        
         await User.create({
           email: userData.email,
           password: hashedPassword,
@@ -28,7 +34,10 @@ export const seedCommunityOffers = async (): Promise<void> => {
           lastName: userData.lastName,
           role: 'user',
           isActive: true,
+          seedPhraseHash,
         });
+        
+        console.log(`   ✅ Created user ${userData.email} with seed phrase: ${seedPhrase}`);
       }
     }    console.log('✅ Test users created/verified');
 

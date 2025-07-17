@@ -58,6 +58,8 @@ src/
    ```bash
    npm run seed
    ```
+   
+   **Note**: This command will also generate unique 12-word seed phrases for all users. Make sure to save the displayed seed phrases securely as they provide backup authentication access.
 
 4. Start the development server:
    ```bash
@@ -101,8 +103,9 @@ npm start
 - `GET /api-docs` - Swagger API documentation
 
 ### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - Register new user (returns seed phrase)
+- `POST /api/auth/login` - User login with password
+- `POST /api/auth/seed-phrase-login` - User login with seed phrase
 - `GET /api/auth/profile` - Get user profile (protected)
 - `PUT /api/auth/change-password` - Change password (protected)
 

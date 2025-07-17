@@ -1,17 +1,8 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../database';
 
-export type PendingTransactionType =
-  | 'wallet_transfer'
-  | 'community_market'
-  | 'withdrawal'
-  | 'payment';
-export type TransactionStatus =
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'expired'
-  | 'cancelled';
+export type PendingTransactionType = 'wallet_transfer' | 'community_market' | 'withdrawal' | 'payment';
+export type TransactionStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';
 
 export interface PendingTransactionAttributes {
   id: number;
@@ -35,26 +26,14 @@ export interface PendingTransactionAttributes {
   updatedAt?: Date;
 }
 
-interface PendingTransactionCreationAttributes
-  extends Optional<
-    PendingTransactionAttributes,
-    | 'id'
-    | 'status'
-    | 'approvedAt'
-    | 'rejectedAt'
-    | 'approvalMessage'
-    | 'rejectionReason'
-    | 'createdAt'
-    | 'updatedAt'
-  > {}
+interface PendingTransactionCreationAttributes extends Optional<
+  PendingTransactionAttributes,
+  'id' | 'status' | 'approvedAt' | 'rejectedAt' | 'approvalMessage' | 'rejectionReason' | 'createdAt' | 'updatedAt'
+> {}
 
-class PendingTransaction
-  extends Model<
-    PendingTransactionAttributes,
-    PendingTransactionCreationAttributes
-  >
-  implements PendingTransactionAttributes
-{
+class PendingTransaction extends Model<PendingTransactionAttributes, PendingTransactionCreationAttributes> 
+  implements PendingTransactionAttributes {
+  
   public id!: number;
   public initiatorUserId!: number;
   public signerUserId!: number;
@@ -140,7 +119,7 @@ PendingTransaction.init(
       allowNull: false,
       field: 'initiator_user_id',
       references: {
-        model: 'users',
+        model: 'Users',
         key: 'id',
       },
       onDelete: 'CASCADE',
@@ -150,18 +129,13 @@ PendingTransaction.init(
       allowNull: false,
       field: 'signer_user_id',
       references: {
-        model: 'users',
+        model: 'Users',
         key: 'id',
       },
       onDelete: 'CASCADE',
     },
     transactionType: {
-      type: DataTypes.ENUM(
-        'wallet_transfer',
-        'community_market',
-        'withdrawal',
-        'payment'
-      ),
+      type: DataTypes.ENUM('wallet_transfer', 'community_market', 'withdrawal', 'payment'),
       allowNull: false,
       field: 'transaction_type',
     },
@@ -187,7 +161,7 @@ PendingTransaction.init(
       allowNull: true,
       field: 'recipient_user_id',
       references: {
-        model: 'users',
+        model: 'Users',
         key: 'id',
       },
       onDelete: 'SET NULL',
@@ -203,13 +177,7 @@ PendingTransaction.init(
       field: 'transaction_data',
     },
     status: {
-      type: DataTypes.ENUM(
-        'pending',
-        'approved',
-        'rejected',
-        'expired',
-        'cancelled'
-      ),
+      type: DataTypes.ENUM('pending', 'approved', 'rejected', 'expired', 'cancelled'),
       allowNull: false,
       defaultValue: 'pending',
     },

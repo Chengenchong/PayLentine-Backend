@@ -20,9 +20,6 @@
     "seed": "ts-node src/scripts/seed.ts",
     "db:setup": "npm run seed",
     "db:reset": "npm run seed",
-    "migrate:seed-phrase": "ts-node src/scripts/migrate-seed-phrase.ts",
-    "migrate:seed-phrase:rollback": "ts-node src/scripts/migrate-seed-phrase.ts rollback",
-    "generate:seed-phrases": "ts-node src/scripts/generate-existing-user-seed-phrases.ts",
     "test:seed-phrase": "ts-node src/scripts/test-seed-phrase.ts"
   },
   "keywords": [

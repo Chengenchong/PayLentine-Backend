@@ -108,23 +108,25 @@ ALTER TABLE users ADD COLUMN seed_phrase_hash VARCHAR(500) NOT NULL;
 ## Migration and Setup
 
 ### For New Installations
-No additional setup required. The seed phrase functionality is included in the User model.
+No additional setup required. The seed phrase functionality is included in the User model and integrated into the main seeding process.
 
-### For Existing Installations
+### For All Installations
 
-1. **Run the migration**:
+1. **Run the integrated seed script**:
 ```bash
-npm run migrate:seed-phrase
+npm run seed
 ```
 
-2. **Generate seed phrases for existing users**:
-```bash
-npm run generate:seed-phrases
-```
+This single command will:
+- Set up and sync the database tables
+- Ensure the `seedPhraseHash` column exists
+- Create all seed data (admin user, test users, etc.)
+- Generate unique seed phrases for all users
+- Display the generated seed phrases securely
 
-3. **Rollback migration (if needed)**:
+2. **Testing seed phrase functionality**:
 ```bash
-npm run migrate:seed-phrase:rollback
+npm run test:seed-phrase
 ```
 
 ## Implementation Details

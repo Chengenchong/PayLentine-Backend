@@ -4,6 +4,7 @@ import { seedUserKYC } from './userKYCSeeder';
 import { seedCommunityOffers } from './communityMarketSeeder';
 import { seedMultiSigSettings } from './multiSigSeeder';
 import { seedPendingTransactions } from './pendingTransactionSeeder';
+import { seedContacts } from './contactSeeder';
 import { testConnection, syncDatabase } from '../index';
 
 export const runAllSeeders = async (): Promise<void> => {
@@ -22,6 +23,7 @@ export const runAllSeeders = async (): Promise<void> => {
     await seedCommunityOffers();
     await seedMultiSigSettings();
     await seedPendingTransactions();
+    await seedContacts(); // Add contacts after users are created
     
     console.log('✅ Database seeding completed successfully!');
   } catch (error: any) {
@@ -37,3 +39,4 @@ export { seedUserKYC } from './userKYCSeeder';
 export { seedCommunityOffers } from './communityMarketSeeder';
 export { seedMultiSigSettings } from './multiSigSeeder';
 export { seedPendingTransactions } from './pendingTransactionSeeder';
+export { seedContacts } from './contactSeeder';

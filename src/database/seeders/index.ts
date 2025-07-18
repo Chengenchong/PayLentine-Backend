@@ -15,11 +15,16 @@ export const runAllSeeders = async (): Promise<void> => {
     // Test database connection
     await testConnection();
     
-    // Sync all models (create tables if they don't exist) - force recreate for clean state
-    // This ensures proper table creation order with foreign key constraints
-    await syncAllModels(true);
+    // Check if we should force recreate tables
+    const shouldForceRecreate = process.env.NODE_ENV === 'development' || process.env.FORCE_DB_RESET === 'true';
     
-    // Run individual seeders
+    // Sync all models (create tables if they don't exist)
+    // Only force recreate in development or if explicitly requested
+    await syncAllModels(shouldForceRecreate);
+    
+    console.log('🗄️ Database tables synchronized successfully');
+    
+    // Run individual seeders with better error handling
     await seedAdminUser();
     await seedTestUsers();
     await seedUserKYC();

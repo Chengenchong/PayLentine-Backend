@@ -65,9 +65,6 @@ const router = Router();
  *         requiresSeedPhrase:
  *           type: boolean
  *           description: Whether to require seed phrase for settings changes
- *         seedPhrase:
- *           type: string
- *           description: 12-word seed phrase for verification (required for certain changes)
  *     
  *     PendingTransaction:
  *       type: object
@@ -277,6 +274,79 @@ router.get('/settings', authenticateToken, MultiSigController.getSettings);
  *         description: Authentication required
  */
 router.put('/settings', authenticateToken, MultiSigController.updateSettings);
+
+/**
+ * @swagger
+ * /api/multisig/settings-by-email:
+ *   put:
+ *     summary: Update multi-signature settings using signer email
+ *     description: Update multi-signature settings by providing the signer's email address instead of user ID. The system will look up the user ID from your contacts.
+ *     tags: [Multi-Signature]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isEnabled
+ *               - thresholdAmount
+ *             properties:
+ *               isEnabled:
+ *                 type: boolean
+ *                 description: Enable or disable multi-signature
+ *                 example: true
+ *               thresholdAmount:
+ *                 type: number
+ *                 minimum: 0.01
+ *                 description: Minimum amount to trigger multi-signature
+ *                 example: 1000
+ *               signerEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address of the signer (must be in your contacts)
+ *                 example: "bruno.hoffman@example.com"
+ *               requiresSeedPhrase:
+ *                 type: boolean
+ *                 description: Whether to require seed phrase for settings changes
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Multi-signature settings updated successfully"
+ *                 settings:
+ *                   $ref: '#/components/schemas/MultiSigSettings'
+ *       400:
+ *         description: Invalid input, email not in contacts, or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Selected email is not in your contacts list"
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/settings-by-email', authenticateToken, MultiSigController.updateSettingsByEmail);
 
 /**
  * @swagger

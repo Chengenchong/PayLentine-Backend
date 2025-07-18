@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { MultiSigSettings, PendingTransaction, User } from '../models';
+import { MultiSigSettings, PendingTransaction, User, Contact } from '../models';
 import { PendingTransactionType } from '../models/PendingTransaction';
 
 export interface MultiSigSettingsData {
@@ -583,6 +583,50 @@ export class MultiSigService {
       return words.length === 12;
     } catch (error: any) {
       throw new Error(`Failed to validate seed phrase: ${error.message}`);
+    }
+  }
+
+  /**
+   * Check if an email exists in user's contacts and return the contact user
+   */
+  static async checkContactExists(userId: number, email: string): Promise<boolean> {
+    try {
+      // Find the contact by joining with User table to check email
+      const contact = await Contact.findOne({
+        where: {
+          ownerId: userId // Contact belongs to current user
+        },
+        include: [
+          {
+            model: User,
+            as: 'contactUser', // This should match your association
+            where: {
+              email: email
+            },
+            attributes: ['id', 'email']
+          }
+        ]
+      });
+
+      return !!contact;
+    } catch (error: any) {
+      throw new Error(`Failed to check contact: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find a user by email address
+   */
+  static async findUserByEmail(email: string): Promise<User | null> {
+    try {
+      const user = await User.findOne({
+        where: { email: email },
+        attributes: ['id', 'email', 'firstName', 'lastName']
+      });
+
+      return user;
+    } catch (error: any) {
+      throw new Error(`Failed to find user by email: ${error.message}`);
     }
   }
 }

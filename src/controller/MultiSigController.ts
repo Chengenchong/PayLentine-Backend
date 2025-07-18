@@ -63,8 +63,7 @@ export class MultiSigController {
         isEnabled,
         thresholdAmount,
         signerUserId,
-        requiresSeedPhrase,
-        seedPhrase
+        requiresSeedPhrase
       } = req.body;
 
       // Validation
@@ -83,16 +82,6 @@ export class MultiSigController {
         return;
       }
 
-      // Validate seed phrase if provided
-      let seedPhraseVerified = false;
-      if (seedPhrase) {
-        seedPhraseVerified = await MultiSigService.validateSeedPhrase(parseInt(userId), seedPhrase);
-        if (!seedPhraseVerified) {
-          res.status(400).json({ error: 'Invalid seed phrase' });
-          return;
-        }
-      }
-
       const settings = await MultiSigService.updateSettings(
         parseInt(userId),
         {
@@ -101,7 +90,7 @@ export class MultiSigController {
           signerUserId: signerUserId ? parseInt(signerUserId) : undefined,
           requiresSeedPhrase
         },
-        seedPhraseVerified
+        false // No seed phrase verification required
       );
 
       res.json({
@@ -116,6 +105,100 @@ export class MultiSigController {
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Update user's multi-signature settings using signer email
+   */
+  static async updateSettingsByEmail(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
+      }
+
+      const { isEnabled, thresholdAmount, signerEmail, requiresSeedPhrase } = req.body;
+
+      // Validation
+      if (typeof isEnabled !== 'boolean') {
+        res.status(400).json({ success: false, message: 'isEnabled must be a boolean' });
+        return;
+      }
+
+      if (thresholdAmount && (typeof thresholdAmount !== 'number' || thresholdAmount < 0.01)) {
+        res.status(400).json({ success: false, message: 'thresholdAmount must be a positive number >= 0.01' });
+        return;
+      }
+
+      let signerUserId = null;
+      
+      // If signerEmail is provided, find the corresponding user
+      if (signerEmail) {
+        try {
+          // First verify this email exists in user's contacts
+          const contactExists = await MultiSigService.checkContactExists(parseInt(userId), signerEmail);
+          if (!contactExists) {
+            res.status(400).json({ 
+              success: false, 
+              message: 'Selected email is not in your contacts list' 
+            });
+            return;
+          }
+
+          // Find the actual user with this email
+          const signerUser = await MultiSigService.findUserByEmail(signerEmail);
+          if (!signerUser) {
+            res.status(400).json({ 
+              success: false, 
+              message: 'No registered user found with this email address' 
+            });
+            return;
+          }
+
+          if (signerUser.id === parseInt(userId)) {
+            res.status(400).json({ 
+              success: false, 
+              message: 'Cannot set yourself as the signer' 
+            });
+            return;
+          }
+
+          signerUserId = signerUser.id;
+        } catch (error: any) {
+          res.status(400).json({ 
+            success: false, 
+            message: `Error validating signer email: ${error.message}` 
+          });
+          return;
+        }
+      }
+
+      // Update settings using the found user ID
+      const updatedSettings = await MultiSigService.updateSettings(
+        parseInt(userId),
+        {
+          isEnabled,
+          thresholdAmount,
+          signerUserId: signerUserId || undefined,
+          requiresSeedPhrase
+        },
+        false
+      );
+
+      res.json({
+        success: true,
+        message: 'Multi-signature settings updated successfully',
+        settings: updatedSettings
+      });
+
+    } catch (error: any) {
+      console.error('Error updating multi-sig settings by email:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Internal server error' 
+      });
     }
   }
 

@@ -28,9 +28,6 @@ const router = Router();
  *               nickname:
  *                 type: string
  *                 description: Nickname for the contact
- *               publicKey:
- *                 type: string
- *                 description: Public key of the contact (optional)
  *               notes:
  *                 type: string
  *                 description: Additional notes about the contact
@@ -135,9 +132,6 @@ router.get('/:contactId', authenticateToken, ContactController.getContact);
  *               nickname:
  *                 type: string
  *                 description: Updated nickname for the contact
- *               publicKey:
- *                 type: string
- *                 description: Updated public key of the contact
  *               notes:
  *                 type: string
  *                 description: Updated notes about the contact
@@ -200,5 +194,66 @@ router.delete('/:contactId', authenticateToken, ContactController.deleteContact)
  *         description: Unauthorized
  */
 router.patch('/:contactId/verify', authenticateToken, ContactController.verifyContact);
+
+/**
+ * @swagger
+ * /api/contacts/add-by-email:
+ *   post:
+ *     summary: Add a new contact by email
+ *     tags: [Contacts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - nickname
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email of the user to add as contact
+ *               nickname:
+ *                 type: string
+ *                 description: Nickname for the contact
+ *     responses:
+ *       201:
+ *         description: Contact added successfully
+ *       400:
+ *         description: Bad request - validation error or user not found
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/add-by-email', authenticateToken, ContactController.addContactByEmail);
+
+/**
+ * @swagger
+ * /api/contacts/find-user:
+ *   get:
+ *     summary: Find user by email (for frontend validation)
+ *     tags: [Contacts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: Email to search for
+ *     responses:
+ *       200:
+ *         description: User found
+ *       404:
+ *         description: User not found
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/find-user', authenticateToken, ContactController.findUserByEmail);
 
 export default router;

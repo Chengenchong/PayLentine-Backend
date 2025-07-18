@@ -5,6 +5,7 @@ import CommunityOffer from './CommunityOffer';
 import UserKYC from './UserKYC';
 import MultiSigSettings from './MultiSigSettings';
 import PendingTransaction from './PendingTransaction';
+import Contact from './Contact';
 
 // Define associations here
 User.hasMany(Wallet, { 
@@ -81,6 +82,27 @@ PendingTransaction.belongsTo(User, {
   as: 'recipient'
 });
 
+// Contact associations
+User.hasMany(Contact, {
+  foreignKey: 'ownerId',
+  as: 'contacts'
+});
+
+User.hasMany(Contact, {
+  foreignKey: 'contactUserId',
+  as: 'contactedBy'
+});
+
+Contact.belongsTo(User, {
+  foreignKey: 'ownerId',
+  as: 'owner'
+});
+
+Contact.belongsTo(User, {
+  foreignKey: 'contactUserId',
+  as: 'contactUser'
+});
+
 // Export all models
 export {
   User,
@@ -89,6 +111,7 @@ export {
   UserKYC,
   MultiSigSettings,
   PendingTransaction,
+  Contact,
 };
 
 // Export sequelize instance

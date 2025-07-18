@@ -4,6 +4,7 @@ import walletRoutes from './wallet';
 import communityMarketRoutes from './communityMarket';
 import kycRoutes from './kyc';
 import multisigRoutes from './multisig';
+import contactRoutes from './contacts';
 
 const router = Router();
 
@@ -47,6 +48,9 @@ router.use('/kyc', kycRoutes);
 
 // Mount Multi-Signature routes
 router.use('/multisig', multisigRoutes);
+
+// Mount Contact routes
+router.use('/contacts', contactRoutes);
 
 // Health check route (also available at root level)
 router.get('/health', (req, res) => {

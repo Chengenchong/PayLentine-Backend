@@ -44,17 +44,17 @@ class MultiSigSettings extends Model<MultiSigSettingsAttributes, MultiSigSetting
 MultiSigSettings.init(
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
     userId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       unique: true,
       field: 'user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
@@ -76,11 +76,11 @@ MultiSigSettings.init(
       },
     },
     signerUserId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       field: 'signer_user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'SET NULL',

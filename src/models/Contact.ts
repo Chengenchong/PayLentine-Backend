@@ -39,25 +39,25 @@ class Contact extends Model<ContactAttributes, ContactCreationAttributes> implem
 Contact.init(
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
     ownerId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
     contactUserId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onUpdate: 'CASCADE',

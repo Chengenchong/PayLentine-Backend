@@ -6,15 +6,18 @@ import { seedMultiSigSettings } from './multiSigSeeder';
 import { seedPendingTransactions } from './pendingTransactionSeeder';
 import { seedContacts } from './contactSeeder';
 import { testConnection, syncDatabase } from '../index';
+import { syncAllModels } from '../../models';
 
 export const runAllSeeders = async (): Promise<void> => {
   try {
     console.log('🌱 Starting database seeding...');
-      // Test database connection
+    
+    // Test database connection
     await testConnection();
     
-    // Sync database (create tables if they don't exist) - force recreate for clean state
-    await syncDatabase(true);
+    // Sync all models (create tables if they don't exist) - force recreate for clean state
+    // This ensures proper table creation order with foreign key constraints
+    await syncAllModels(true);
     
     // Run individual seeders
     await seedAdminUser();

@@ -110,26 +110,26 @@ class PendingTransaction extends Model<PendingTransactionAttributes, PendingTran
 PendingTransaction.init(
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
     initiatorUserId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       field: 'initiator_user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
     },
     signerUserId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       field: 'signer_user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
@@ -157,11 +157,11 @@ PendingTransaction.init(
       field: 'recipient_address',
     },
     recipientUserId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       field: 'recipient_user_id',
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'SET NULL',

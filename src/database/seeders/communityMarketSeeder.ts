@@ -1,6 +1,7 @@
 import { CommunityOffer, User } from '../../models';
 import type { UserTag, OfferType, OfferStatus } from '../../models/CommunityOffer';
 import { AuthService } from '../../services/AuthService';
+import { SeedPhraseGenerator } from '../../utils';
 
 export const seedCommunityOffers = async (): Promise<void> => {
   try {
@@ -8,29 +9,46 @@ export const seedCommunityOffers = async (): Promise<void> => {
 
     // First, create test users if they don't exist
     const testUsers = [
-      { id: 1, email: 'revolut@test.com', firstName: 'Revolut', lastName: 'User' },
-      { id: 2, email: 'community@test.com', firstName: 'Community', lastName: 'User3' },
-      { id: 3, email: 'maybank@test.com', firstName: 'Maybank', lastName: 'User' },
-      { id: 4, email: 'ocbc@test.com', firstName: 'OCBC', lastName: 'User' },
-      { id: 5, email: 'seller1@test.com', firstName: 'Seller', lastName: 'One' },
-      { id: 6, email: 'seller2@test.com', firstName: 'Seller', lastName: 'Two' },
+      { email: 'revolut@test.com', firstName: 'Revolut', lastName: 'User' },
+      { email: 'community@test.com', firstName: 'Community', lastName: 'User3' },
+      { email: 'maybank@test.com', firstName: 'Maybank', lastName: 'User' },
+      { email: 'ocbc@test.com', firstName: 'OCBC', lastName: 'User' },
+      { email: 'seller1@test.com', firstName: 'Seller', lastName: 'One' },
+      { email: 'seller2@test.com', firstName: 'Seller', lastName: 'Two' },
     ];
 
-    // Create users if they don't exist
+    // Create users if they don't exist using findOrCreate to avoid conflicts
+    const createdUsers: any[] = [];
     for (const userData of testUsers) {
-      const existingUser = await User.findOne({ where: { email: userData.email } });
-      if (!existingUser) {
-        const hashedPassword = await AuthService.hashPassword('testpassword123');
-        await User.create({
+      const hashedPassword = await AuthService.hashPassword('testpassword123');
+      
+      // Generate seed phrase for each community market user
+      const seedPhrase = SeedPhraseGenerator.generateSeedPhrase();
+      const seedPhraseHash = SeedPhraseGenerator.hashSeedPhrase(seedPhrase);
+      
+      const [user, created] = await User.findOrCreate({
+        where: { email: userData.email },
+        defaults: {
           email: userData.email,
           password: hashedPassword,
           firstName: userData.firstName,
           lastName: userData.lastName,
           role: 'user',
           isActive: true,
-        });
+          seedPhraseHash,
+        }
+      });
+      
+      createdUsers.push(user);
+      
+      if (created) {
+        console.log(`   ✅ Created user ${userData.email} with seed phrase: ${seedPhrase}`);
+      } else {
+        console.log(`   ℹ️  User ${userData.email} already exists, skipping creation`);
       }
-    }    console.log('✅ Test users created/verified');
+    }
+    
+    console.log('✅ Test users created/verified');
 
     // Get the user IDs
     const users = await User.findAll({

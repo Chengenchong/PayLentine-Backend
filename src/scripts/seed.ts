@@ -19,6 +19,7 @@ const runSeeders = async () => {
     console.log('🔗 Host:', process.env.DB_HOST || 'localhost');
     console.log('');
 
+    // Run the standard seeders (this will create/sync tables and generate seed phrases)
     await runAllSeeders();
     
     console.log('');
@@ -30,6 +31,7 @@ const runSeeders = async () => {
     console.log(`   🔑 Password: ${process.env.ADMIN_DEFAULT_PASSWORD || 'DefaultPassword123'}`);
     console.log('');
     console.log('⚠️  Important: Change the default admin password after first login!');
+    console.log('🔐 Important: Save the generated seed phrases securely!');
     
     process.exit(0);
   } catch (error: any) {

@@ -63,4 +63,7 @@ export const generateRandomString = (length: number = 10): string => {
  */
 export const delay = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
-}; 
+};
+
+// Export seed phrase generator
+export { SeedPhraseGenerator } from './seedPhraseGenerator';

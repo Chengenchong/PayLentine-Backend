@@ -19,7 +19,8 @@
     "type-check": "tsc --noEmit",
     "seed": "ts-node src/scripts/seed.ts",
     "db:setup": "npm run seed",
-    "db:reset": "npm run seed"
+    "db:reset": "npm run seed",
+    "test:seed-phrase": "ts-node src/scripts/test-seed-phrase.ts"
   },
   "keywords": [
     "nodejs",

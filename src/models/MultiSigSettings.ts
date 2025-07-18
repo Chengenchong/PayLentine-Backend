@@ -50,12 +50,12 @@ class MultiSigSettings
 MultiSigSettings.init(
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
     userId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       unique: true,
       field: 'user_id',
@@ -82,7 +82,7 @@ MultiSigSettings.init(
       },
     },
     signerUserId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       field: 'signer_user_id',
       references: {

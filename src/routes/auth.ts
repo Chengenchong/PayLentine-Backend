@@ -14,6 +14,7 @@ const router = Router();
 // Public routes
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
+router.post('/seed-phrase-login', AuthController.seedPhraseLogin);
 router.post('/setup-database', AuthController.setupDatabase);
 
 // Protected routes

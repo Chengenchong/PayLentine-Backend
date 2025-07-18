@@ -409,50 +409,27 @@ router.post('/create-pending', authenticateToken, MultiSigController.createPendi
  * /api/multisig/pending-approvals:
  *   get:
  *     summary: Get transactions pending your approval
- *     description: Retrieve transactions that are waiting for the current user's approval
+ *     description: Get all transactions that need your approval (simple endpoint)
  *     tags: [Multi-Signature]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           default: pending
- *         description: Filter by status (comma-separated for multiple)
- *       - in: query
- *         name: transactionType
- *         schema:
- *           type: string
- *         description: Filter by transaction type (comma-separated for multiple)
- *       - in: query
  *         name: page
  *         schema:
  *           type: integer
- *           minimum: 1
  *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           minimum: 1
- *           maximum: 100
  *           default: 20
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           enum: [createdAt, expiresAt, amount]
- *           default: createdAt
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [ASC, DESC]
- *           default: DESC
+ *           maximum: 50
+ *         description: Items per page
  *     responses:
  *       200:
- *         description: Pending approvals retrieved successfully
+ *         description: Success
  *         content:
  *           application/json:
  *             schema:

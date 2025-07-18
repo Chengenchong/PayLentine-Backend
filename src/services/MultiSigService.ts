@@ -197,7 +197,56 @@ export class MultiSigService {
   }
 
   /**
-   * Get pending transactions for a signer
+   * Get pending transactions for a signer (SIMPLIFIED)
+   */
+  static async getPendingApprovalsSimple(
+    signerUserId: number,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    transactions: PendingTransaction[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    try {
+      const offset = (page - 1) * limit;
+
+      const { rows: transactions, count: total } = await PendingTransaction.findAndCountAll({
+        where: {
+          signerUserId,
+          status: 'pending'  // Only pending transactions
+        },
+        include: [
+          {
+            model: User,
+            as: 'initiator',
+            attributes: ['id', 'email', 'firstName', 'lastName']
+          },
+          {
+            model: User,
+            as: 'recipient',
+            attributes: ['id', 'email', 'firstName', 'lastName']
+          }
+        ],
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']]  // Newest first
+      });
+
+      return {
+        transactions,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get pending approvals: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get pending transactions for a signer (ORIGINAL WITH FILTERS)
    */
   static async getPendingApprovals(
     signerUserId: number,

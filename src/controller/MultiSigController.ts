@@ -292,6 +292,7 @@ export class MultiSigController {
 
   /**
    * Get pending transactions that need approval (for signer)
+   * SIMPLIFIED: Just show all pending transactions that need your approval
    */
   static async getPendingApprovals(req: CustomRequest, res: Response): Promise<void> {
     try {
@@ -301,28 +302,11 @@ export class MultiSigController {
         return;
       }
 
-      const {
-        status = 'pending',
-        transactionType,
-        page = 1,
-        limit = 20,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC'
-      } = req.query;
+      // Simple pagination - that's all we need
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
 
-      const result = await MultiSigService.getPendingApprovals(
-        parseInt(userId),
-        {
-          status: typeof status === 'string' ? status.split(',') : (status as string[]),
-          transactionType: typeof transactionType === 'string' ? transactionType.split(',') : (transactionType as string[])
-        },
-        {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
-          sortBy: sortBy as any,
-          sortOrder: sortOrder as 'ASC' | 'DESC'
-        }
-      );
+      const result = await MultiSigService.getPendingApprovalsSimple(parseInt(userId), page, limit);
 
       res.json(result);
     } catch (error: any) {

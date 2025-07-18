@@ -2,6 +2,24 @@ import { Response } from 'express';
 import { CustomRequest } from '../types/express';
 import { MultiSigService } from '../services/MultiSigService';
 import { PendingTransactionType } from '../models/PendingTransaction';
+import * as crypto from 'crypto';
+
+// Temporary storage for seed phrase verification tokens
+// In production, use Redis or another cache solution
+const seedPhraseVerificationTokens = new Map<string, { token: string; expiresAt: number }>();
+
+// Helper function to clean up expired tokens
+const cleanupExpiredTokens = () => {
+  const now = Date.now();
+  for (const [userId, tokenData] of seedPhraseVerificationTokens.entries()) {
+    if (now > tokenData.expiresAt) {
+      seedPhraseVerificationTokens.delete(userId);
+    }
+  }
+};
+
+// Clean up expired tokens every 5 minutes
+setInterval(cleanupExpiredTokens, 5 * 60 * 1000);
 
 export class MultiSigController {
   /**
@@ -24,7 +42,7 @@ export class MultiSigController {
             isEnabled: false,
             thresholdAmount: 1000,
             signerUserId: null,
-            requiresSeedPhrase: true
+            requiresSeedPhrase: false // Default to false for easy setup
           }
         });
         return;
@@ -48,65 +66,6 @@ export class MultiSigController {
     }
   }
 
-  /**
-   * Update user's multi-signature settings
-   */
-  static async updateSettings(req: CustomRequest, res: Response): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
-      const {
-        isEnabled,
-        thresholdAmount,
-        signerUserId,
-        requiresSeedPhrase
-      } = req.body;
-
-      // Validation
-      if (typeof isEnabled !== 'boolean') {
-        res.status(400).json({ error: 'isEnabled must be a boolean' });
-        return;
-      }
-
-      if (thresholdAmount && (typeof thresholdAmount !== 'number' || thresholdAmount < 0.01)) {
-        res.status(400).json({ error: 'thresholdAmount must be a positive number >= 0.01' });
-        return;
-      }
-
-      if (signerUserId && parseInt(signerUserId) === parseInt(userId)) {
-        res.status(400).json({ error: 'Cannot set yourself as the signer' });
-        return;
-      }
-
-      const settings = await MultiSigService.updateSettings(
-        parseInt(userId),
-        {
-          isEnabled,
-          thresholdAmount,
-          signerUserId: signerUserId ? parseInt(signerUserId) : undefined,
-          requiresSeedPhrase
-        },
-        false // No seed phrase verification required
-      );
-
-      res.json({
-        message: 'Multi-signature settings updated successfully',
-        settings: {
-          id: settings.id,
-          isEnabled: settings.isEnabled,
-          thresholdAmount: parseFloat(settings.thresholdAmount.toString()),
-          signerUserId: settings.signerUserId,
-          requiresSeedPhrase: settings.requiresSeedPhrase
-        }
-      });
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
-    }
-  }
 
   /**
    * Update user's multi-signature settings using signer email
@@ -119,7 +78,7 @@ export class MultiSigController {
         return;
       }
 
-      const { isEnabled, thresholdAmount, signerEmail, requiresSeedPhrase } = req.body;
+      const { isEnabled, thresholdAmount, signerEmail, requiresSeedPhrase, verificationToken } = req.body;
 
       // Validation
       if (typeof isEnabled !== 'boolean') {
@@ -130,6 +89,35 @@ export class MultiSigController {
       if (thresholdAmount && (typeof thresholdAmount !== 'number' || thresholdAmount < 0.01)) {
         res.status(400).json({ success: false, message: 'thresholdAmount must be a positive number >= 0.01' });
         return;
+      }
+
+      // Check if current settings are "locked" (requiresSeedPhrase is true)
+      let seedPhraseVerified = false;
+      const existingSettings = await MultiSigService.getSettings(parseInt(userId));
+      
+      if (existingSettings && existingSettings.requiresSeedPhrase) {
+        // Settings are locked, need verification token
+        if (!verificationToken || typeof verificationToken !== 'string') {
+          res.status(400).json({ 
+            success: false, 
+            message: 'Verification token required to modify locked multi-signature settings' 
+          });
+          return;
+        }
+
+        // Check if token is valid and not expired
+        const storedToken = seedPhraseVerificationTokens.get(userId);
+        if (!storedToken || storedToken.token !== verificationToken || Date.now() > storedToken.expiresAt) {
+          res.status(400).json({ 
+            success: false, 
+            message: 'Invalid or expired verification token' 
+          });
+          return;
+        }
+
+        seedPhraseVerified = true;
+        // Remove the used token
+        seedPhraseVerificationTokens.delete(userId);
       }
 
       let signerUserId = null;
@@ -175,7 +163,7 @@ export class MultiSigController {
         }
       }
 
-      // Update settings using the found user ID
+      // Update settings
       const updatedSettings = await MultiSigService.updateSettings(
         parseInt(userId),
         {
@@ -184,7 +172,7 @@ export class MultiSigController {
           signerUserId: signerUserId || undefined,
           requiresSeedPhrase
         },
-        false
+        seedPhraseVerified
       );
 
       res.json({
@@ -607,10 +595,27 @@ export class MultiSigController {
 
       const isValid = await MultiSigService.validateSeedPhrase(parseInt(userId), seedPhrase);
 
-      res.json({
-        valid: isValid,
-        message: isValid ? 'Seed phrase is valid' : 'Invalid seed phrase'
-      });
+      if (isValid) {
+        // Generate a temporary verification token (valid for 5 minutes)
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        
+        // Store the token temporarily
+        seedPhraseVerificationTokens.set(userId, {
+          token: verificationToken,
+          expiresAt: Date.now() + (5 * 60 * 1000) // 5 minutes
+        });
+
+        res.json({
+          valid: true,
+          message: 'Seed phrase is valid',
+          verificationToken
+        });
+      } else {
+        res.json({
+          valid: false,
+          message: 'Invalid seed phrase'
+        });
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

@@ -26,7 +26,7 @@ const router = Router();
  *           description: ID of the designated signer
  *         requiresSeedPhrase:
  *           type: boolean
- *           description: Whether seed phrase verification is required
+ *           description: Whether settings are "locked" (true = locked, requires seed phrase for changes; false = unlocked, easy setup mode)
  *         signer:
  *           type: object
  *           nullable: true
@@ -243,40 +243,6 @@ router.get('/settings', authenticateToken, MultiSigController.getSettings);
 
 /**
  * @swagger
- * /api/multisig/settings:
- *   put:
- *     summary: Update multi-signature settings
- *     description: Update the current user's multi-signature configuration
- *     tags: [Multi-Signature]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/MultiSigSettingsUpdate'
- *     responses:
- *       200:
- *         description: Settings updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 settings:
- *                   $ref: '#/components/schemas/MultiSigSettings'
- *       400:
- *         description: Invalid input or seed phrase verification failed
- *       401:
- *         description: Authentication required
- */
-router.put('/settings', authenticateToken, MultiSigController.updateSettings);
-
-/**
- * @swagger
  * /api/multisig/settings-by-email:
  *   put:
  *     summary: Update multi-signature settings using signer email
@@ -310,8 +276,12 @@ router.put('/settings', authenticateToken, MultiSigController.updateSettings);
  *                 example: "bruno.hoffman@example.com"
  *               requiresSeedPhrase:
  *                 type: boolean
- *                 description: Whether to require seed phrase for settings changes
- *                 example: true
+ *                 description: Whether to "lock" multi-sig settings (false = unlocked for easy setup, true = locked and requires verification token for changes)
+ *                 example: false
+ *               verificationToken:
+ *                 type: string
+ *                 description: Verification token obtained from /api/multisig/validate-seed-phrase (required only if current settings are locked with requiresSeedPhrase = true)
+ *                 example: "abc123def456..."
  *     responses:
  *       200:
  *         description: Settings updated successfully
@@ -329,7 +299,7 @@ router.put('/settings', authenticateToken, MultiSigController.updateSettings);
  *                 settings:
  *                   $ref: '#/components/schemas/MultiSigSettings'
  *       400:
- *         description: Invalid input, email not in contacts, or user not found
+ *         description: Invalid input, email not in contacts, user not found, or verification token validation failed for locked settings
  *         content:
  *           application/json:
  *             schema:
@@ -340,7 +310,7 @@ router.put('/settings', authenticateToken, MultiSigController.updateSettings);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Selected email is not in your contacts list"
+ *                   example: "Verification token required to modify locked multi-signature settings"
  *       401:
  *         description: Authentication required
  *       500:
@@ -813,6 +783,10 @@ router.get('/stats', authenticateToken, MultiSigController.getStats);
  *                   type: boolean
  *                 message:
  *                   type: string
+ *                 verificationToken:
+ *                   type: string
+ *                   description: Temporary verification token (only provided if valid=true, expires in 5 minutes)
+ *                   example: "abc123def456..."
  *       400:
  *         description: Seed phrase is required
  *       401:

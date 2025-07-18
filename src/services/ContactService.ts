@@ -57,7 +57,7 @@ export class ContactService {
         ownerId,
         contactUserId: contactUser.id,
         nickname,
-        isVerified: false,
+        isVerified: true,
       });
 
       return contact;

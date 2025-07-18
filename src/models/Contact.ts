@@ -77,7 +77,7 @@ Contact.init(
     isVerified: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: false,
+      defaultValue: true,
     },
     notes: {
       type: DataTypes.TEXT,

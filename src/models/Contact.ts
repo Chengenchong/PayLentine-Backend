@@ -9,7 +9,6 @@ export interface ContactAttributes {
   nickname: string;
   publicKey?: string;
   isVerified: boolean;
-  isTrusted: boolean;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -26,7 +25,6 @@ class Contact extends Model<ContactAttributes, ContactCreationAttributes> implem
   public nickname!: string;
   public publicKey?: string;
   public isVerified!: boolean;
-  public isTrusted!: boolean;
   public notes?: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -93,11 +91,6 @@ Contact.init(
       allowNull: false,
       defaultValue: false,
     },
-    isTrusted: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -135,10 +128,6 @@ Contact.init(
       {
         fields: ['is_verified'],
         name: 'idx_contact_verified',
-      },
-      {
-        fields: ['is_trusted'],
-        name: 'idx_contact_trusted',
       },
     ],
   }

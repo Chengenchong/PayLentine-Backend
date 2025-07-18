@@ -32,20 +32,6 @@ export class ContactService {
         throw new Error('Cannot add yourself as a contact');
       }
 
-      // If setting as trusted, check if user already has a trusted contact
-      if (data.isTrusted) {
-        const existingTrustedContact = await Contact.findOne({
-          where: {
-            ownerId: data.ownerId,
-            isTrusted: true,
-          },
-        });
-
-        if (existingTrustedContact) {
-          throw new Error('You can only have one trusted contact. Please remove trust from existing contact first.');
-        }
-      }
-
       const contact = await Contact.create(data);
       return contact;
     } catch (error) {
@@ -195,61 +181,6 @@ export class ContactService {
   }
 
   /**
-   * Get trusted contacts for multi-sig operations
-   */
-  static async getTrustedContacts(ownerId: number): Promise<Contact[]> {
-    try {
-      const trustedContacts = await Contact.findAll({
-        where: {
-          ownerId,
-          isTrusted: true,
-          isVerified: true,
-        },
-        include: [
-          {
-            model: User,
-            as: 'contactUser',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'username'],
-          },
-        ],
-        order: [['nickname', 'ASC']],
-      });
-
-      return trustedContacts;
-    } catch (error) {
-      console.error('Error fetching trusted contacts:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get the current trusted contact for a user (maximum 1)
-   */
-  static async getCurrentTrustedContact(ownerId: number): Promise<Contact | null> {
-    try {
-      const trustedContact = await Contact.findOne({
-        where: {
-          ownerId,
-          isTrusted: true,
-          isVerified: true,
-        },
-        include: [
-          {
-            model: User,
-            as: 'contactUser',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'username'],
-          },
-        ],
-      });
-
-      return trustedContact;
-    } catch (error) {
-      console.error('Error fetching current trusted contact:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Verify a contact (typically after successful interaction or verification process)
    */
   static async verifyContact(ownerId: number, contactId: number): Promise<Contact | null> {
@@ -269,47 +200,6 @@ export class ContactService {
       return contact;
     } catch (error) {
       console.error('Error verifying contact:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Set trust level for a contact (enforces one trusted contact per user)
-   */
-  static async setTrustLevel(ownerId: number, contactId: number, isTrusted: boolean): Promise<Contact | null> {
-    try {
-      const contact = await Contact.findOne({
-        where: {
-          id: contactId,
-          ownerId,
-        },
-      });
-
-      if (!contact) {
-        throw new Error('Contact not found');
-      }
-
-      if (isTrusted) {
-        // Check if user already has a trusted contact
-        const existingTrustedContact = await Contact.findOne({
-          where: {
-            ownerId,
-            isTrusted: true,
-            id: { [require('sequelize').Op.ne]: contactId }, // Exclude current contact
-          },
-        });
-
-        if (existingTrustedContact) {
-          // Remove trust from existing trusted contact before setting new one
-          await existingTrustedContact.update({ isTrusted: false });
-          console.log(`Removed trust from contact ${existingTrustedContact.id} to set new trusted contact ${contactId}`);
-        }
-      }
-
-      await contact.update({ isTrusted });
-      return contact;
-    } catch (error) {
-      console.error('Error setting trust level:', error);
       throw error;
     }
   }

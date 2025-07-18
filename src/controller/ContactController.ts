@@ -18,7 +18,7 @@ export class ContactController {
         return;
       }
 
-      const { contactUserId, nickname, publicKey, notes, isTrusted = false } = req.body;
+      const { contactUserId, nickname, publicKey, notes } = req.body;
 
       if (!contactUserId || !nickname) {
         res.status(400).json({
@@ -35,7 +35,6 @@ export class ContactController {
         publicKey,
         notes,
         isVerified: false,
-        isTrusted,
       };
 
       const contact = await ContactService.addContact(contactData);
@@ -147,7 +146,7 @@ export class ContactController {
       }
 
       const contactId = parseInt(req.params.contactId);
-      const { nickname, publicKey, notes, isTrusted } = req.body;
+      const { nickname, publicKey, notes } = req.body;
 
       if (isNaN(contactId)) {
         res.status(400).json({
@@ -161,7 +160,6 @@ export class ContactController {
       if (nickname !== undefined) updateData.nickname = nickname.trim();
       if (publicKey !== undefined) updateData.publicKey = publicKey;
       if (notes !== undefined) updateData.notes = notes;
-      if (isTrusted !== undefined) updateData.isTrusted = isTrusted;
 
       const contact = await ContactService.updateContact(userId, contactId, updateData);
 
@@ -275,68 +273,6 @@ export class ContactController {
   }
 
   /**
-   * Get trusted contacts for multi-sig operations
-   */
-  static async getTrustedContacts(req: CustomRequest, res: Response): Promise<void> {
-    try {
-      const userId = parseInt(req.user?.id || '0');
-      if (!userId || !req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      const trustedContacts = await ContactService.getTrustedContacts(userId);
-
-      res.status(200).json({
-        success: true,
-        message: 'Trusted contacts retrieved successfully',
-        data: trustedContacts,
-      });
-    } catch (error: any) {
-      console.error('Error in getTrustedContacts:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to retrieve trusted contacts',
-      });
-    }
-  }
-
-  /**
-   * Get the current trusted contact (maximum 1 per user)
-   */
-  static async getCurrentTrustedContact(req: CustomRequest, res: Response): Promise<void> {
-    try {
-      const userId = parseInt(req.user?.id || '0');
-      if (!userId || !req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      const trustedContact = await ContactService.getCurrentTrustedContact(userId);
-
-      res.status(200).json({
-        success: true,
-        message: trustedContact 
-          ? 'Current trusted contact retrieved successfully'
-          : 'No trusted contact found',
-        data: trustedContact,
-      });
-    } catch (error: any) {
-      console.error('Error in getCurrentTrustedContact:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to retrieve current trusted contact',
-      });
-    }
-  }
-
-  /**
    * Verify a contact
    */
   static async verifyContact(req: CustomRequest, res: Response): Promise<void> {
@@ -380,63 +316,6 @@ export class ContactController {
       res.status(400).json({
         success: false,
         message: error.message || 'Failed to verify contact',
-      });
-    }
-  }
-
-  /**
-   * Set trust level for a contact
-   */
-  static async setTrustLevel(req: CustomRequest, res: Response): Promise<void> {
-    try {
-      const userId = parseInt(req.user?.id || '0');
-      if (!userId || !req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      const contactId = parseInt(req.params.contactId);
-      const { isTrusted } = req.body;
-
-      if (isNaN(contactId)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid contact ID',
-        });
-        return;
-      }
-
-      if (typeof isTrusted !== 'boolean') {
-        res.status(400).json({
-          success: false,
-          message: 'isTrusted must be a boolean value',
-        });
-        return;
-      }
-
-      const contact = await ContactService.setTrustLevel(userId, contactId, isTrusted);
-
-      if (!contact) {
-        res.status(404).json({
-          success: false,
-          message: 'Contact not found',
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: `Contact ${isTrusted ? 'trusted' : 'untrusted'} successfully`,
-        data: contact,
-      });
-    } catch (error: any) {
-      console.error('Error in setTrustLevel:', error);
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to set trust level',
       });
     }
   }

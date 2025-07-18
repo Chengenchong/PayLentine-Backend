@@ -34,10 +34,6 @@ const router = Router();
  *               notes:
  *                 type: string
  *                 description: Additional notes about the contact
- *               isTrusted:
- *                 type: boolean
- *                 description: Whether the contact is trusted for multi-sig operations
- *                 default: false
  *     responses:
  *       201:
  *         description: Contact added successfully
@@ -88,38 +84,6 @@ router.get('/', authenticateToken, ContactController.getUserContacts);
  *         description: Unauthorized
  */
 router.get('/search', authenticateToken, ContactController.searchContacts);
-
-/**
- * @swagger
- * /api/contacts/trusted:
- *   get:
- *     summary: Get trusted contacts for multi-sig operations
- *     tags: [Contacts]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Trusted contacts retrieved successfully
- *       401:
- *         description: Unauthorized
- */
-router.get('/trusted', authenticateToken, ContactController.getTrustedContacts);
-
-/**
- * @swagger
- * /api/contacts/trusted/current:
- *   get:
- *     summary: Get the current trusted contact (maximum 1 per user)
- *     tags: [Contacts]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Current trusted contact retrieved successfully
- *       401:
- *         description: Unauthorized
- */
-router.get('/trusted/current', authenticateToken, ContactController.getCurrentTrustedContact);
 
 /**
  * @swagger
@@ -177,9 +141,6 @@ router.get('/:contactId', authenticateToken, ContactController.getContact);
  *               notes:
  *                 type: string
  *                 description: Updated notes about the contact
- *               isTrusted:
- *                 type: boolean
- *                 description: Updated trust level for the contact
  *     responses:
  *       200:
  *         description: Contact updated successfully
@@ -239,42 +200,5 @@ router.delete('/:contactId', authenticateToken, ContactController.deleteContact)
  *         description: Unauthorized
  */
 router.patch('/:contactId/verify', authenticateToken, ContactController.verifyContact);
-
-/**
- * @swagger
- * /api/contacts/{contactId}/trust:
- *   patch:
- *     summary: Set trust level for a contact
- *     tags: [Contacts]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: contactId
- *         required: true
- *         schema:
- *           type: integer
- *         description: Contact ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - isTrusted
- *             properties:
- *               isTrusted:
- *                 type: boolean
- *                 description: Whether to trust or untrust the contact
- *     responses:
- *       200:
- *         description: Trust level updated successfully
- *       404:
- *         description: Contact not found
- *       401:
- *         description: Unauthorized
- */
-router.patch('/:contactId/trust', authenticateToken, ContactController.setTrustLevel);
 
 export default router;

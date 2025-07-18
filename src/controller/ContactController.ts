@@ -5,6 +5,93 @@ import { CustomRequest } from '../types/express';
 
 export class ContactController {
   /**
+   * Add a new contact by email
+   */
+  static async addContactByEmail(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const userId = parseInt(req.user?.id || '0');
+      if (!userId || !req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { email, nickname } = req.body;
+
+      if (!email || !nickname) {
+        res.status(400).json({
+          success: false,
+          message: 'Email and nickname are required',
+        });
+        return;
+      }
+
+      const contact = await ContactService.addContactByEmail(
+        userId,
+        email.trim().toLowerCase(),
+        nickname.trim()
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Contact added successfully',
+        data: contact,
+      });
+    } catch (error: any) {
+      console.error('Error in addContactByEmail:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to add contact',
+      });
+    }
+  }
+
+  /**
+   * Find user by email (for frontend validation)
+   */
+  static async findUserByEmail(req: CustomRequest, res: Response): Promise<void> {
+    try {
+      const { email } = req.query;
+
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: 'Email is required',
+        });
+        return;
+      }
+
+      const user = await ContactService.findUserByEmail(email as string);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error in findUserByEmail:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  /**
    * Add a new contact
    */
   static async addContact(req: CustomRequest, res: Response): Promise<void> {
@@ -18,7 +105,7 @@ export class ContactController {
         return;
       }
 
-      const { contactUserId, nickname, publicKey, notes } = req.body;
+      const { contactUserId, nickname, notes } = req.body;
 
       if (!contactUserId || !nickname) {
         res.status(400).json({
@@ -32,7 +119,6 @@ export class ContactController {
         ownerId: userId,
         contactUserId: parseInt(contactUserId),
         nickname: nickname.trim(),
-        publicKey,
         notes,
         isVerified: false,
       };
@@ -146,7 +232,7 @@ export class ContactController {
       }
 
       const contactId = parseInt(req.params.contactId);
-      const { nickname, publicKey, notes } = req.body;
+      const { nickname, notes } = req.body;
 
       if (isNaN(contactId)) {
         res.status(400).json({
@@ -158,7 +244,6 @@ export class ContactController {
 
       const updateData: Partial<ContactCreationAttributes> = {};
       if (nickname !== undefined) updateData.nickname = nickname.trim();
-      if (publicKey !== undefined) updateData.publicKey = publicKey;
       if (notes !== undefined) updateData.notes = notes;
 
       const contact = await ContactService.updateContact(userId, contactId, updateData);

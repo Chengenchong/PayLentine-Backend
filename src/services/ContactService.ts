@@ -5,6 +5,69 @@ import { Op } from 'sequelize';
 
 export class ContactService {
   /**
+   * Find user by email to get contact details
+   */
+  static async findUserByEmail(email: string): Promise<User | null> {
+    try {
+      const user = await User.findOne({
+        where: { email },
+        attributes: ['id', 'firstName', 'lastName', 'email'],
+      });
+      return user;
+    } catch (error) {
+      console.error('Error finding user by email:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a new contact using email and nickname
+   */
+  static async addContactByEmail(
+    ownerId: number,
+    email: string,
+    nickname: string
+  ): Promise<Contact> {
+    try {
+      // Find the user by email
+      const contactUser = await this.findUserByEmail(email);
+      if (!contactUser) {
+        throw new Error('User with this email not found');
+      }
+
+      // Prevent self-contact
+      if (ownerId === contactUser.id) {
+        throw new Error('Cannot add yourself as a contact');
+      }
+
+      // Check if the contact already exists
+      const existingContact = await Contact.findOne({
+        where: {
+          ownerId,
+          contactUserId: contactUser.id,
+        },
+      });
+
+      if (existingContact) {
+        throw new Error('Contact already exists');
+      }
+
+      // Create the contact
+      const contact = await Contact.create({
+        ownerId,
+        contactUserId: contactUser.id,
+        nickname,
+        isVerified: true,
+      });
+
+      return contact;
+    } catch (error) {
+      console.error('Error adding contact by email:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Add a new contact for a user
    */
   static async addContact(data: ContactCreationAttributes): Promise<Contact> {
@@ -51,7 +114,7 @@ export class ContactService {
           {
             model: User,
             as: 'contactUser',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'username'],
+            attributes: ['id', 'firstName', 'lastName', 'email'],
           },
         ],
         order: [['nickname', 'ASC']],
@@ -78,7 +141,7 @@ export class ContactService {
           {
             model: User,
             as: 'contactUser',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'username'],
+            attributes: ['id', 'firstName', 'lastName', 'email'],
           },
         ],
       });
@@ -158,7 +221,6 @@ export class ContactService {
                 { '$contactUser.firstName$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$contactUser.lastName$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$contactUser.email$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$contactUser.username$': { [Op.iLike]: `%${searchTerm}%` } },
               ],
             },
           ],
@@ -167,7 +229,7 @@ export class ContactService {
           {
             model: User,
             as: 'contactUser',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'username'],
+            attributes: ['id', 'firstName', 'lastName', 'email'],
           },
         ],
         order: [['nickname', 'ASC']],

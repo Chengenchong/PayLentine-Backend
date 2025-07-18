@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { MultiSigSettings, PendingTransaction, User } from '../models';
+import { MultiSigSettings, PendingTransaction, User, Contact } from '../models';
 import { PendingTransactionType } from '../models/PendingTransaction';
 
 export interface MultiSigSettingsData {
@@ -81,22 +81,19 @@ export class MultiSigService {
       let settings = await MultiSigSettings.findOne({ where: { userId } });
 
       if (settings) {
-        // If disabling multi-sig or changing signer, require seed phrase verification
-        const requiresVerification = (
-          (settings.isEnabled && !settingsData.isEnabled) || // Disabling
-          (settings.signerUserId !== settingsData.signerUserId) // Changing signer
-        );
-
-        if (requiresVerification && settings.requiresSeedPhrase && !seedPhraseVerified) {
-          throw new Error('Seed phrase verification required for this operation');
+        // If the current setup is "locked" (requiresSeedPhrase is true) and user wants to make changes,
+        // they need seed phrase verification to "unlock" it
+        if (settings.requiresSeedPhrase && !seedPhraseVerified) {
+          throw new Error('Seed phrase verification required to modify locked multi-signature settings');
         }
 
         // Update existing settings
         await settings.update(settingsData);
       } else {
-        // Create new settings
+        // Create new settings with requiresSeedPhrase defaulting to false for easy setup
         settings = await MultiSigSettings.create({
           userId,
+          requiresSeedPhrase: false, // Default to false for easy initial setup
           ...settingsData
         });
       }
@@ -200,7 +197,56 @@ export class MultiSigService {
   }
 
   /**
-   * Get pending transactions for a signer
+   * Get pending transactions for a signer (SIMPLIFIED)
+   */
+  static async getPendingApprovalsSimple(
+    signerUserId: number,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    transactions: PendingTransaction[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    try {
+      const offset = (page - 1) * limit;
+
+      const { rows: transactions, count: total } = await PendingTransaction.findAndCountAll({
+        where: {
+          signerUserId,
+          status: 'pending'  // Only pending transactions
+        },
+        include: [
+          {
+            model: User,
+            as: 'initiator',
+            attributes: ['id', 'email', 'firstName', 'lastName']
+          },
+          {
+            model: User,
+            as: 'recipient',
+            attributes: ['id', 'email', 'firstName', 'lastName']
+          }
+        ],
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']]  // Newest first
+      });
+
+      return {
+        transactions,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get pending approvals: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get pending transactions for a signer (ORIGINAL WITH FILTERS)
    */
   static async getPendingApprovals(
     signerUserId: number,
@@ -566,23 +612,79 @@ export class MultiSigService {
   }
 
   /**
-   * Validate seed phrase (placeholder - implement according to your seed phrase system)
+   * Validate seed phrase against user's stored seed phrase hash
    */
   static async validateSeedPhrase(userId: number, seedPhrase: string): Promise<boolean> {
     try {
-      // TODO: Implement actual seed phrase validation
-      // This is a placeholder implementation
+      // Retrieve the user's stored seed phrase hash
+      const user = await User.findByPk(userId, {
+        attributes: ['id', 'seedPhraseHash']
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (!user.seedPhraseHash) {
+        throw new Error('User does not have a seed phrase set');
+      }
+
+      // Import SeedPhraseGenerator here to avoid circular dependencies
+      const { SeedPhraseGenerator } = await import('../utils/seedPhraseGenerator');
       
-      // In a real implementation, you would:
-      // 1. Retrieve the user's stored seed phrase hash
-      // 2. Compare the provided seed phrase with the stored hash
-      // 3. Return true if they match, false otherwise
-      
-      // For now, we'll return true if the seed phrase has 12 words
-      const words = seedPhrase.trim().split(/\s+/);
-      return words.length === 12;
+      // Validate the seed phrase format first
+      if (!SeedPhraseGenerator.validateSeedPhraseFormat(seedPhrase)) {
+        return false;
+      }
+
+      // Compare the provided seed phrase with the stored hash
+      return SeedPhraseGenerator.verifySeedPhrase(seedPhrase, user.seedPhraseHash);
     } catch (error: any) {
       throw new Error(`Failed to validate seed phrase: ${error.message}`);
+    }
+  }
+
+  /**
+   * Check if an email exists in user's contacts and return the contact user
+   */
+  static async checkContactExists(userId: number, email: string): Promise<boolean> {
+    try {
+      // Find the contact by joining with User table to check email
+      const contact = await Contact.findOne({
+        where: {
+          ownerId: userId // Contact belongs to current user
+        },
+        include: [
+          {
+            model: User,
+            as: 'contactUser', // This should match your association
+            where: {
+              email: email
+            },
+            attributes: ['id', 'email']
+          }
+        ]
+      });
+
+      return !!contact;
+    } catch (error: any) {
+      throw new Error(`Failed to check contact: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find a user by email address
+   */
+  static async findUserByEmail(email: string): Promise<User | null> {
+    try {
+      const user = await User.findOne({
+        where: { email: email },
+        attributes: ['id', 'email', 'firstName', 'lastName']
+      });
+
+      return user;
+    } catch (error: any) {
+      throw new Error(`Failed to find user by email: ${error.message}`);
     }
   }
 }

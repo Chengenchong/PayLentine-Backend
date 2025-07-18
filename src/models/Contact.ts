@@ -7,7 +7,6 @@ export interface ContactAttributes {
   ownerId: number;
   contactUserId: number;
   nickname: string;
-  publicKey?: string;
   isVerified: boolean;
   notes?: string;
   createdAt: Date;
@@ -15,7 +14,7 @@ export interface ContactAttributes {
 }
 
 // Define creation attributes (optional fields during creation)
-export interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'publicKey' | 'notes' | 'createdAt' | 'updatedAt'> {}
+export interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 // Define the Contact model class
 class Contact extends Model<ContactAttributes, ContactCreationAttributes> implements ContactAttributes {
@@ -23,7 +22,6 @@ class Contact extends Model<ContactAttributes, ContactCreationAttributes> implem
   public ownerId!: number;
   public contactUserId!: number;
   public nickname!: string;
-  public publicKey?: string;
   public isVerified!: boolean;
   public notes?: string;
   public readonly createdAt!: Date;
@@ -76,20 +74,10 @@ Contact.init(
         },
       },
     },
-    publicKey: {
-      type: DataTypes.STRING(500),
-      allowNull: true,
-      validate: {
-        len: {
-          args: [0, 500],
-          msg: 'Public key must not exceed 500 characters',
-        },
-      },
-    },
     isVerified: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: false,
+      defaultValue: true,
     },
     notes: {
       type: DataTypes.TEXT,

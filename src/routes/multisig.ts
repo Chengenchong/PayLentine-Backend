@@ -26,7 +26,7 @@ const router = Router();
  *           description: ID of the designated signer
  *         requiresSeedPhrase:
  *           type: boolean
- *           description: Whether seed phrase verification is required
+ *           description: Whether settings are "locked" (true = locked, requires seed phrase for changes; false = unlocked, easy setup mode)
  *         signer:
  *           type: object
  *           nullable: true
@@ -65,9 +65,6 @@ const router = Router();
  *         requiresSeedPhrase:
  *           type: boolean
  *           description: Whether to require seed phrase for settings changes
- *         seedPhrase:
- *           type: string
- *           description: 12-word seed phrase for verification (required for certain changes)
  *     
  *     PendingTransaction:
  *       type: object
@@ -246,10 +243,10 @@ router.get('/settings', authenticateToken, MultiSigController.getSettings);
 
 /**
  * @swagger
- * /api/multisig/settings:
+ * /api/multisig/settings-by-email:
  *   put:
- *     summary: Update multi-signature settings
- *     description: Update the current user's multi-signature configuration
+ *     summary: Update multi-signature settings using signer email
+ *     description: Update multi-signature settings by providing the signer's email address instead of user ID. The system will look up the user ID from your contacts.
  *     tags: [Multi-Signature]
  *     security:
  *       - bearerAuth: []
@@ -258,7 +255,33 @@ router.get('/settings', authenticateToken, MultiSigController.getSettings);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/MultiSigSettingsUpdate'
+ *             type: object
+ *             required:
+ *               - isEnabled
+ *               - thresholdAmount
+ *             properties:
+ *               isEnabled:
+ *                 type: boolean
+ *                 description: Enable or disable multi-signature
+ *                 example: true
+ *               thresholdAmount:
+ *                 type: number
+ *                 minimum: 0.01
+ *                 description: Minimum amount to trigger multi-signature
+ *                 example: 1000
+ *               signerEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address of the signer (must be in your contacts)
+ *                 example: "bruno.hoffman@example.com"
+ *               requiresSeedPhrase:
+ *                 type: boolean
+ *                 description: Whether to "lock" multi-sig settings (false = unlocked for easy setup, true = locked and requires verification token for changes)
+ *                 example: false
+ *               verificationToken:
+ *                 type: string
+ *                 description: Verification token obtained from /api/multisig/validate-seed-phrase (required only if current settings are locked with requiresSeedPhrase = true)
+ *                 example: "abc123def456..."
  *     responses:
  *       200:
  *         description: Settings updated successfully
@@ -267,16 +290,33 @@ router.get('/settings', authenticateToken, MultiSigController.getSettings);
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Multi-signature settings updated successfully"
  *                 settings:
  *                   $ref: '#/components/schemas/MultiSigSettings'
  *       400:
- *         description: Invalid input or seed phrase verification failed
+ *         description: Invalid input, email not in contacts, user not found, or verification token validation failed for locked settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Verification token required to modify locked multi-signature settings"
  *       401:
  *         description: Authentication required
+ *       500:
+ *         description: Internal server error
  */
-router.put('/settings', authenticateToken, MultiSigController.updateSettings);
+router.put('/settings-by-email', authenticateToken, MultiSigController.updateSettingsByEmail);
 
 /**
  * @swagger
@@ -369,50 +409,27 @@ router.post('/create-pending', authenticateToken, MultiSigController.createPendi
  * /api/multisig/pending-approvals:
  *   get:
  *     summary: Get transactions pending your approval
- *     description: Retrieve transactions that are waiting for the current user's approval
+ *     description: Get all transactions that need your approval (simple endpoint)
  *     tags: [Multi-Signature]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           default: pending
- *         description: Filter by status (comma-separated for multiple)
- *       - in: query
- *         name: transactionType
- *         schema:
- *           type: string
- *         description: Filter by transaction type (comma-separated for multiple)
- *       - in: query
  *         name: page
  *         schema:
  *           type: integer
- *           minimum: 1
  *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           minimum: 1
- *           maximum: 100
  *           default: 20
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           enum: [createdAt, expiresAt, amount]
- *           default: createdAt
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [ASC, DESC]
- *           default: DESC
+ *           maximum: 50
+ *         description: Items per page
  *     responses:
  *       200:
- *         description: Pending approvals retrieved successfully
+ *         description: Success
  *         content:
  *           application/json:
  *             schema:
@@ -743,6 +760,10 @@ router.get('/stats', authenticateToken, MultiSigController.getStats);
  *                   type: boolean
  *                 message:
  *                   type: string
+ *                 verificationToken:
+ *                   type: string
+ *                   description: Temporary verification token (only provided if valid=true, expires in 5 minutes)
+ *                   example: "abc123def456..."
  *       400:
  *         description: Seed phrase is required
  *       401:
